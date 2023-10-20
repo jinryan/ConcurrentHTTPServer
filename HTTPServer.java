@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class HTTPServer {
     public static void main(String[] args) {
-        System.out.println("Server initiated");
+        System.out.println("Server initiated on port 8080");
         int port = 8080;
         try {
             /* Difference between ServerSocket and Socket in Java
