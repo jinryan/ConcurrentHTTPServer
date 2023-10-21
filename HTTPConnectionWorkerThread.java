@@ -3,6 +3,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class HTTPConnectionWorkerThread extends Thread {
 
     private Socket socket;
@@ -10,8 +13,38 @@ public class HTTPConnectionWorkerThread extends Thread {
         this.socket = socket;
     }
 
+    public static Map<String, String> parseRequest(String httpRequest) {
+        Map<String, String> requestMap = new HashMap<>();
+        String[] lines = httpRequest.split("\\r\\n");
+        String[] requestLine = lines[0].split(" ");
+        requestMap.put("Method", requestLine[0]);
+        requestMap.put("Path", requestLine[1]);
+        requestMap.put("Version", requestLine[2]);
+        int bodyStartIndex = -1;
+        for (int i = 1; i < lines.length; i++) {
+            if (lines[i].isEmpty()) {
+                bodyStartIndex = i + 1;
+                break;
+            }
+            String[] header = lines[i].split(": ");
+            requestMap.put(header[0], header[1]);
+        }
+        if (bodyStartIndex != -1 && bodyStartIndex < lines.length) {
+            StringBuilder bodyBuilder = new StringBuilder();
+            for (int i = bodyStartIndex; i < lines.length; i++) {
+                bodyBuilder.append(lines[i]);
+            }
+            requestMap.put("Body", bodyBuilder.toString());
+        }
+        return requestMap;
+    }
+
     public static String processRequest(String request) {
-        return "hey";
+        Map<String, String> requestMap = parseRequest(request);
+        for (Map.Entry<String, String> entry : requestMap.entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        }
+        return request;
     }
 
     @Override
