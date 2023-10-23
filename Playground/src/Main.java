@@ -12,17 +12,19 @@ import java.util.Map;
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
     public static void main(String[] args) {
-        try {
-//            new URI(res);
-            String path = "/Users/ryanjin/Desktop/Yale/Fall 23/CPSC 434 Topics in Networked Systems/ConcurrentHTTPServer/ConcurrentHTTPServer/../www/index.html";
-            String path2 = path.replace(" ", "%20");
-            new URI("file://" + path2);
-            File f = new File(path);
-            System.out.println(f.exists());
-        } catch (URISyntaxException e) {
-            System.out.println("Unsuccessful");
-            e.printStackTrace();
-        }
+        String s = "/";
+        System.out.println(s.equals("/"));
+//        try {
+////            new URI(res);
+//            String path = "/Users/ryanjin/Desktop/Yale/Fall 23/CPSC 434 Topics in Networked Systems/ConcurrentHTTPServer/ConcurrentHTTPServer/../www/index.html";
+//            String path2 = path.replace(" ", "%20");
+//            new URI("file://" + path2);
+//            File f = new File(path);
+//            System.out.println(f.exists());
+//        } catch (URISyntaxException e) {
+//            System.out.println("Unsuccessful");
+//            e.printStackTrace();
+//        }
 //        try {
 //
 //            // Path to the Perl interpreter and the Perl script

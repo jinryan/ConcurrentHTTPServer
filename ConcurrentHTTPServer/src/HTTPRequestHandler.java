@@ -19,11 +19,14 @@ public class HTTPRequestHandler implements RequestHandler {
     private String request;
     public Map<String, String> requestMap;
     private final ServerConfigObject serverConfig;
+    private HTTPRequestType requestType;
 
     private SocketChannel socketChannel;
 
-    char[] lastFour = {0, 0, 0, 0};
-    int i;
+    private char[] lastFour = {0, 0, 0, 0};
+    private int i;
+    private int expectedContentFromBody;
+    private boolean readingBody = false;
 
     public HTTPRequestHandler(StringBuffer request, ServerConfigObject serverConfig) {
         this.request = request.toString();
@@ -39,6 +42,7 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     public void parseRequest() {
+        System.out.println("Requ /est is\n========\n" + this.request + "========\n");
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
         requestMap.put("Method", requestLine[0]);
@@ -62,6 +66,29 @@ public class HTTPRequestHandler implements RequestHandler {
         }
     }
 
+    private String processGET() throws ResponseException, IOException {
+        String response = "";
+        File responseFile = getFileFromPath(requestMap.get("Path"));
+        response = getFileOutput(responseFile);
+        return response;
+    }
+
+    private String processPost() throws IOException, ResponseException {
+        int port = 8080;
+
+        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
+        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost"))
+            documentRoot = serverConfig.getFirstRoot(port);
+
+        if (documentRoot == null)
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+
+        String cgiPath = requestMap.get("Path");
+        String uri = getURI(cgiPath, documentRoot);
+        String queryString = requestMap.get("Body");
+        return runCGIProgram(cgiPath, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
+    }
+
     private String processRequest() {
         String response = "";
 
@@ -70,12 +97,13 @@ public class HTTPRequestHandler implements RequestHandler {
                 throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
             }
 
-            if (!(requestMap.get("Method").equals("GET"))) {
+            if (requestMap.get("Method").equals("GET")) {
+                return processGET();
+            } else if (requestMap.get("Method").equals("POST")) {
+                return processPost();
+            } else {
                 throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
             }
-
-            File responseFile = getFileFromPath(requestMap.get("Path"));
-            response = getFileOutput(responseFile);
 
         } catch (ResponseException e) {
             return e.getStatusCode() + " " + e.getMessage();
@@ -170,7 +198,6 @@ public class HTTPRequestHandler implements RequestHandler {
         } else {
             res = currentAbsolutePath + "/../" + documentRoot + path;
         }
-        System.out.println(res);
 
         if (requestMap.get("User-Agent") != null && path.equals("/") && requestMap.get("User-Agent").contains("iPhone")) {
             Path testPath = Paths.get(currentAbsolutePath + "/../" + documentRoot + path + "index_m.html");
@@ -204,12 +231,12 @@ public class HTTPRequestHandler implements RequestHandler {
         return response;
     }
 
-    public String runCGIProgram(String programPath, String queryString, int remotePort, int serverPort, String method) throws IOException {
+    public String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
         String perlInterpreter = "perl";
         ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
         processBuilder.environment().put("QUERY_STRING", queryString);
-        processBuilder.environment().put("REMOTE_*", String.valueOf(remotePort));
-        processBuilder.environment().put("SERVER_*", String.valueOf(serverPort));
+        processBuilder.environment().put("REMOTE_*", remotePort);
+        processBuilder.environment().put("SERVER_*", serverPort);
         processBuilder.environment().put("REQUEST_METHOD", method);
 
 
@@ -231,14 +258,29 @@ public class HTTPRequestHandler implements RequestHandler {
         this.request += c;
         this.lastFour[i % 4] = c;
         i++;
+        if (readingBody) {
+            expectedContentFromBody--;
+        }
     }
 
     public boolean requestCompleted() {
-        return (i > 3
+        if (readingBody && expectedContentFromBody == 0) {
+            return true;
+        } else if (!readingBody
+                && i > 3
                 && lastFour[(i-1) % 4] == '\n'
                 && lastFour[(i-2) % 4] == '\r'
                 && lastFour[(i-3) % 4] == '\n'
-                && lastFour[(i-4) % 4] == '\r');
+                && lastFour[(i-4) % 4] == '\r') {
+            parseRequest();
+            if (requestMap.containsKey("Content-length")) {
+                expectedContentFromBody = Integer.parseInt(requestMap.get("Content-length"));
+                readingBody = true;
+            } else {
+                return true;
+            }
+        }
+        return false;
     }
 
 
