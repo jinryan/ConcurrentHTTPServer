@@ -6,6 +6,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,9 +15,9 @@ import ConfigParser.ConfigNode;
 import ConfigParser.ServerConfigObject;
 
 public class RequestHandler {
-    private String request;
+    private final String request;
     public Map<String, String> requestMap;
-    private ServerConfigObject serverConfig;
+    private final ServerConfigObject serverConfig;
 
     public RequestHandler(StringBuffer request, ServerConfigObject serverConfig) {
         this.request = request.toString();
@@ -112,10 +114,13 @@ public class RequestHandler {
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
             throw new ResponseException(path + " is not a valid path", 404);
 
+        Path currentPath = Paths.get("");
+        String currentAbsolutePath = currentPath.toAbsolutePath().toString();
+
         if (path.equals("/")) {
-            res = "../../" + documentRoot + "/index.html";
+            res = currentAbsolutePath + "/../" + documentRoot + "/index.html";
         } else {
-            res = "../../" + documentRoot + path;
+            res = currentAbsolutePath + "/../" + documentRoot + path;
         }
 
         // Check for malformed path
