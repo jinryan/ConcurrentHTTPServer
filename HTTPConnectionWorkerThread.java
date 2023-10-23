@@ -6,12 +6,27 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
+class ResponseException extends Exception {
+    private final int statusCode; 
+    
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public ResponseException(String message, int statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+}
+
 public class HTTPConnectionWorkerThread extends Thread {
 
     private Socket socket;
     public HTTPConnectionWorkerThread(Socket socket) {
         this.socket = socket;
     }
+
+    
 
     public static Map<String, String> parseRequest(String httpRequest) {
         Map<String, String> requestMap = new HashMap<>();
@@ -41,10 +56,26 @@ public class HTTPConnectionWorkerThread extends Thread {
 
     public static String processRequest(String request) {
         Map<String, String> requestMap = parseRequest(request);
-        for (Map.Entry<String, String> entry : requestMap.entrySet()) {
-            System.out.println(entry.getKey() + ": " + entry.getValue());
+        try {
+            if (!(requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1"))) {
+                throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
+            }
+
+            if (!(requestMap.get("Method").equals("GET"))) {
+                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+            }
+
+            
+        } catch (ResponseException e) {
+            return e.getStatusCode() + " " + e.getMessage();
         }
-        return request;
+
+        String response = "";
+        
+        for (Map.Entry<String, String> entry : requestMap.entrySet()) {
+            response += entry.getKey() + ": " + entry.getValue();
+        }
+        return response;
     }
 
     @Override
@@ -53,8 +84,9 @@ public class HTTPConnectionWorkerThread extends Thread {
             InputStream inputStream = socket.getInputStream();
             OutputStream outputStream = socket.getOutputStream();
 
-            String request = "GET /api/books HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\r\nAccept: application/json\r\n\r\n";
-            String result = processRequest(request);
+            String getRequest = "GET /api/books HTTP/1.2\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\r\nAccept: application/json\r\n\r\n";
+            // String postRequest = "POST /api/books HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\r\nContent-Type: application/json\r\nContent-Length: 35\r\n\r\n{\r\n  \"title\": \"Java Programming\",\r\n  \"author\": \"John Doe\"\r\n}";
+            String result = processRequest(getRequest);
 
 
             // TODO we would write
