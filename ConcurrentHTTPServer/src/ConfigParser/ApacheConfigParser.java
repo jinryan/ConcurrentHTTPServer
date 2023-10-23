@@ -16,6 +16,7 @@
 package ConfigParser;
 
 import java.io.*;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,6 +64,12 @@ public class ApacheConfigParser {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 		String line;
 		ConfigNode currentNode = ConfigNode.createRootNode();
+		ConfigNode firstPortNode = ConfigNode.createRootNode();
+
+		HashMap<String, Boolean> firstMap = new HashMap<>();
+		boolean first = false;
+		boolean firstDone = false;
+
 		while ((line = reader.readLine()) != null) {
 			if (commentMatcher.reset(line).find()) {
 				continue;
@@ -70,13 +77,30 @@ public class ApacheConfigParser {
 				String name = sectionOpenMatcher.group(1);
 				String content = sectionOpenMatcher.group(2);
 				ConfigNode sectionNode = ConfigNode.createChildNode(name, content, currentNode);
+				if (!firstMap.containsKey(content)) {
+					firstMap.put(content, true);
+					firstPortNode = ConfigNode.createChildNode(name, content, currentNode);
+					first = true;
+					firstDone = false;
+				}
 				currentNode = sectionNode;
 			} else if (sectionCloseMatcher.reset(line).find()) {
 				currentNode = currentNode.getParent();
+				if (firstDone)
+					first = false;
 			} else if (directiveMatcher.reset(line).find()) {
 				String name = directiveMatcher.group(1);
 				String content = directiveMatcher.group(2);
 				ConfigNode.createChildNode(name, content, currentNode);
+				if (first) {
+					if (name.equals("ServerName")) {
+						ConfigNode.createChildNode(name, "First", firstPortNode);
+					} else if (name.equals("DocumentRoot")) {
+						ConfigNode.createChildNode(name, content, firstPortNode);
+					}
+					firstDone = true;
+				}
+				
 			}
 		}
 
@@ -110,6 +134,11 @@ public class ApacheConfigParser {
 						documentRoot = entry.getContent();
 					}
 				}
+
+				if (child.getName().equals("First")) {
+					serverConfig.addMapping(child.getContent(), documentRoot, port);
+				}
+
 				if (serverName != null && documentRoot != null) {
 					serverConfig.addMapping(serverName, documentRoot, port);
 				}

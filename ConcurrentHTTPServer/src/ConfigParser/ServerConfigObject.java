@@ -17,7 +17,7 @@ public class ServerConfigObject {
         }
 
         (this.mapping.get(port)).put(serverName, docRoot);
-//        System.out.println(serverName + ":" + port + " = " + docRoot);
+    //    System.out.println(serverName + ":" + port + " = " + docRoot);
     }
 
     public String getRootFrom(String serverName, int port) {
@@ -27,5 +27,13 @@ public class ServerConfigObject {
         }
         return nameToRoot.get(serverName);
 
+    }
+
+    public String getFirstRoot(int port) {
+        HashMap<String, String> nameToRoot = mapping.get(port);
+        if (nameToRoot == null) {
+            return null;
+        }
+        return nameToRoot.get("First");
     }
 }

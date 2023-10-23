@@ -82,7 +82,13 @@ public class RequestHandler {
     private File getFileFromPath(String path) throws ResponseException {
         
         String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), 8080);
+        if (documentRoot == null)
+            documentRoot = serverConfig.getRootFrom("First", 8080);
+            
         System.out.println(documentRoot);
+
+        if (documentRoot == null)
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
 
         String baseDirectory = "../../" + documentRoot;
         File res;
