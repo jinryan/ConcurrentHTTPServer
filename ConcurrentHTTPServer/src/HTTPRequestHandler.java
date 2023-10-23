@@ -2,41 +2,44 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import ConfigParser.ConfigNode;
 import ConfigParser.ServerConfigObject;
 
 public class HTTPRequestHandler implements RequestHandler {
     private String request;
     public Map<String, String> requestMap;
-    private ServerConfigObject serverConfig;
-    char[] lastFour;
-    int i = 0;
+    private final ServerConfigObject serverConfig;
+
+    char[] lastFour = {0, 0, 0, 0};
+    int i;
 
     public HTTPRequestHandler(StringBuffer request, ServerConfigObject serverConfig) {
         this.request = request.toString();
         this.serverConfig = serverConfig;
-        requestMap = new HashMap<>();
+        this.requestMap = new HashMap<>();
     }
 
     public HTTPRequestHandler(ServerConfigObject serverConfig) {
         this.serverConfig = serverConfig;
-    }
-
-    public void readCharsToRequest(char c) {
-        this.request += c;
-        this.lastFour[i % 4] = c;
-        i++;
+        this.requestMap = new HashMap<>();
+        this.request = "";
     }
 
     public void parseRequest() {
-        System.out.println("Parsing " + this.request);
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
-
+        System.out.println("Request line is " + lines[0]);
         requestMap.put("Method", requestLine[0]);
         requestMap.put("Path", requestLine[1]);
         requestMap.put("Version", requestLine[2]);
@@ -62,9 +65,7 @@ public class HTTPRequestHandler implements RequestHandler {
         String response = "";
 
         try {
-            if (!(requestMap.get("Version").startsWith("HTTP/") &&
-                    (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
-                System.out.println("Response version is |" + requestMap.get("Version") + "|");
+            if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
                 throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
             }
 
@@ -96,7 +97,7 @@ public class HTTPRequestHandler implements RequestHandler {
         return content.toString();
     }
 
-    private File getFileFromPath(String path) throws ResponseException {
+    private File getFileFromPath(String path) throws ResponseException, IOException {
         int port = 8080;
 
         String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
@@ -109,15 +110,38 @@ public class HTTPRequestHandler implements RequestHandler {
         String uri = getURI(path, documentRoot);
         File res = new File(uri);
 
-
-        // TODO: MIME checking
-
         if (!res.exists()){
             throw new ResponseException(path + " could not be found", 404);
         }
 
+        checkType(uri);
+
         return res;
     }
+
+    private void checkType(String uri) throws ResponseException, IOException {
+        String mimeType = Files.probeContentType(Paths.get(uri));
+
+        if (mimeType == null)
+            throw new ResponseException("Invalid file type: requested file is a folder", 406);
+
+        String[] types = requestMap.get("Accept").split(",\\s*");
+
+        String mimeStart = mimeType.substring(0, mimeType.indexOf("/"));
+        String mimeEnd = mimeType.substring(mimeType.indexOf("/") + 1);
+
+        for (String type : types) {
+            String typeStart = type.substring(0, type.indexOf("/"));
+            String typeEnd  = type.substring(type.indexOf("/") + 1);
+            if ((typeStart.equals(mimeStart) || typeStart.equals("*")) && (typeEnd.equals(mimeEnd) || typeEnd.equals("*"))) {
+                return;
+            }
+        }
+
+        throw new ResponseException("Invalid file type " + mimeType, 406);
+
+    }
+
 
     private String getURI(String path, String documentRoot) throws ResponseException{
         String res = "";
@@ -125,10 +149,13 @@ public class HTTPRequestHandler implements RequestHandler {
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
             throw new ResponseException(path + " is not a valid path", 404);
 
+        Path currentPath = Paths.get("");
+        String currentAbsolutePath = currentPath.toAbsolutePath().toString();
+
         if (path.equals("/")) {
-            res = "../../" + documentRoot + "/index.html";
+            res = currentAbsolutePath + "/../" + documentRoot + "/index.html";
         } else {
-            res = "../../" + documentRoot + path;
+            res = currentAbsolutePath + "/../" + documentRoot + path;
         }
 
         // Check for malformed path
@@ -142,19 +169,24 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     public String getResponse() {
-        System.out.println(request);
+//        System.out.println(request);
         String result = processRequest();
 
         String CRLF = "\r\n";
         String response =
-            "HTTP/1.1 200 OK" + CRLF +
-            "Content-Type: text/html; charset=UTF-8" + CRLF +
-            "Content-Length: " + result.getBytes().length + CRLF + CRLF +
-            result;
-            
+                "HTTP/1.1 200 OK" + CRLF +
+                        "Content-Type: text/html; charset=UTF-8" + CRLF +
+                        "Content-Length: " + result.getBytes().length + CRLF + CRLF +
+                        result;
+
         return response;
     }
 
+    public void readCharsToRequest(char c) {
+        this.request += c;
+        this.lastFour[i % 4] = c;
+        i++;
+    }
 
     public boolean requestCompleted() {
         return (i > 3
@@ -163,4 +195,6 @@ public class HTTPRequestHandler implements RequestHandler {
                 && lastFour[(i-3) % 4] == '\n'
                 && lastFour[(i-4) % 4] == '\r');
     }
+
+
 }
