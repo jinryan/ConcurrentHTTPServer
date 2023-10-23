@@ -114,7 +114,13 @@ public class HTTPRequestHandler implements RequestHandler {
             throw new ResponseException(path + " could not be found", 404);
         }
 
-        checkType(uri);
+        if (requestMap.get("Method").equals("GET")) {
+            checkType(uri);
+        } else if (requestMap.get("Method").equals("POST")) {
+            System.out.println("POST REQUEST OH NO!");
+        } else {
+            throw new ResponseException("Invalid method " + requestMap.get("Method"), 405);
+        }
 
         return res;
     }
@@ -144,6 +150,7 @@ public class HTTPRequestHandler implements RequestHandler {
 
 
     private String getURI(String path, String documentRoot) throws ResponseException{
+        System.out.println(documentRoot + path);
         String res = "";
 
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
@@ -153,10 +160,21 @@ public class HTTPRequestHandler implements RequestHandler {
         String currentAbsolutePath = currentPath.toAbsolutePath().toString();
 
         if (path.equals("/")) {
-            res = currentAbsolutePath + "/../" + documentRoot + "/index.html";
+            res = currentAbsolutePath + "/../" + documentRoot + path + "index.html";
         } else {
             res = currentAbsolutePath + "/../" + documentRoot + path;
         }
+
+        if (requestMap.get("User-Agent") != null && path.equals("/") && requestMap.get("User-Agent").contains("iPhone")) {
+            System.out.println("asdfas");
+            Path testPath = Paths.get(currentAbsolutePath + "/../" + documentRoot + path + "index_m.html");
+            if (Files.exists(testPath)) {
+                res = testPath.toString();
+            } else {
+                System.out.println("no mobile thing found");
+            }
+        }
+        System.out.println(res);
 
         // Check for malformed path
         try {
