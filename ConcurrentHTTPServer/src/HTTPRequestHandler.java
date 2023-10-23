@@ -39,7 +39,6 @@ public class HTTPRequestHandler implements RequestHandler {
     public void parseRequest() {
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
-        System.out.println("Request line is " + lines[0]);
         requestMap.put("Method", requestLine[0]);
         requestMap.put("Path", requestLine[1]);
         requestMap.put("Version", requestLine[2]);
@@ -150,7 +149,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
 
     private String getURI(String path, String documentRoot) throws ResponseException{
-        System.out.println(documentRoot + path);
         String res = "";
 
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
@@ -166,15 +164,11 @@ public class HTTPRequestHandler implements RequestHandler {
         }
 
         if (requestMap.get("User-Agent") != null && path.equals("/") && requestMap.get("User-Agent").contains("iPhone")) {
-            System.out.println("asdfas");
             Path testPath = Paths.get(currentAbsolutePath + "/../" + documentRoot + path + "index_m.html");
             if (Files.exists(testPath)) {
                 res = testPath.toString();
-            } else {
-                System.out.println("no mobile thing found");
             }
         }
-        System.out.println(res);
 
         // Check for malformed path
         try {
