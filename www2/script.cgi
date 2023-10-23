@@ -16,7 +16,7 @@ $Location = $FORM{'l'};
 print "Content-type:text/html\r\n\r\n"; 
 print "<html>"; 
 print "<head>"; 
-print "<title>GeeksForGeeks - Get Method</title>"; 
+print "<title>CGI Return Value</title>"; 
 print "</head>"; 
 print "<body>"; 
 print "<h3>Hello You searched '$Location' for '$SearchTerm'<br> 
@@ -29,5 +29,4 @@ Match 4<br>
 etc.....</h3>"; 
 print "</body>"; 
 print "</html>"; 
-  
-1; 
+exit(0);

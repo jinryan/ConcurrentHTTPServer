@@ -4,6 +4,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,9 +28,14 @@ public class HTTPRequestHandler implements RequestHandler {
     public String filePath;
     public String lastModifiedDate;
     public String fileType;
+    private HTTPRequestType requestType;
 
-    char[] lastFour = {0, 0, 0, 0};
-    int i;
+    private SocketChannel socketChannel;
+
+    private char[] lastFour = {0, 0, 0, 0};
+    private int i;
+    private int expectedContentFromBody;
+    private boolean readingBody = false;
 
     private static final Map<Integer, String> statusCodeMessages;
 
@@ -47,13 +59,15 @@ public class HTTPRequestHandler implements RequestHandler {
         this.requestMap = new HashMap<>();
     }
 
-    public HTTPRequestHandler(ServerConfigObject serverConfig) {
+    public HTTPRequestHandler(ServerConfigObject serverConfig, SocketChannel socketChannel) {
         this.serverConfig = serverConfig;
         this.requestMap = new HashMap<>();
         this.request = "";
+        this.socketChannel = socketChannel;
     }
 
     public void parseRequest() {
+        System.out.println("Requ /est is\n========\n" + this.request + "========\n");
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
         requestMap.put("Method", requestLine[0]);
@@ -81,10 +95,65 @@ public class HTTPRequestHandler implements RequestHandler {
         if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
             throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
+    }
 
-        if (!(requestMap.get("Method").equals("GET"))) {
-            throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+    private String getLastModifiedDate(File responseFile) {
+        long lastModifiedTimestamp = responseFile.lastModified();
+        Date lastModifiedDateDate = new Date(lastModifiedTimestamp);
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        return sdf.format(lastModifiedDateDate);
+    }
+
+    private String getCurrentDate() {
+        ZonedDateTime currentDateTime = ZonedDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
+        return currentDateTime.format(formatter);
+    }
+    
+    private String processGET() throws ResponseException, IOException {
+        String response;
+        File responseFile = handleFileFromPath(requestMap.get("Path"));
+        lastModifiedDate = getLastModifiedDate(responseFile);
+        response = getFileOutput(responseFile);
+        return response;
+    }
+
+    private String processPOST() throws IOException, ResponseException {
+        int port = 8080;
+        lastModifiedDate = getCurrentDate();
+
+        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
+        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost"))
+            documentRoot = serverConfig.getFirstRoot(port);
+
+        if (documentRoot == null)
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+
+        String cgiPath = requestMap.get("Path");
+        String uri = getURI(cgiPath, documentRoot);
+        String queryString = requestMap.get("Body");
+        return runCGIProgram(cgiPath, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
+    }
+
+    private String processRequest() throws ResponseException{
+        String responseBody;
+
+        try {
+            if (requestMap.get("Method").equals("GET")) {
+                responseBody = processGET();
+            } else if (requestMap.get("Method").equals("POST")) {
+                responseBody =  processPOST();
+            } else {
+                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+            }
+            String responseHeaders = generateHeaders(200, responseBody);
+            return responseHeaders + responseBody;
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return null;
     }
 
     private String getFileOutput(File responseFile) throws IOException{
@@ -155,6 +224,12 @@ public class HTTPRequestHandler implements RequestHandler {
     private String getURI(String path, String documentRoot) throws ResponseException{
         String res;
 
+        // Redirecting empty to index.html
+        if (path.equals("/")) {
+            path = "/index.html";
+        }
+
+
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
             throw new ResponseException(path + " is not a valid path", 404);
 
@@ -176,7 +251,8 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // Check for malformed path
         try {
-            new URI(res);
+            String encodedRes = res.replace(" ", "%20");
+            new URI("file://" + encodedRes);
         } catch (URISyntaxException e) {
             throw new ResponseException(path + " is not a valid path", 404);
         }
@@ -190,26 +266,10 @@ public class HTTPRequestHandler implements RequestHandler {
         //System.out.println(request);
         try {
             validateRequest();
-            File responseFile = handleFileFromPath(requestMap.get("Path"));
-
-            long lastModifiedTimestamp = responseFile.lastModified();
-            Date lastModifiedDateDate = new Date(lastModifiedTimestamp);
-            SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-            sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-            lastModifiedDate = sdf.format(lastModifiedDateDate);
-
-            // TODO: add if-modified-since caching here
-            String responseBody = getFileOutput(responseFile);
-            String responseHeaders = generateHeaders(200, responseBody);
-
-            return responseHeaders + responseBody;
-
+            return processRequest();
         } catch (ResponseException e) {
             return generateHeaders(e.getStatusCode(), e.getMessage());
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-        return null;
     }
 
     private String generateHeaders(int statusCode, String responseBody) {
@@ -220,9 +280,7 @@ public class HTTPRequestHandler implements RequestHandler {
         res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
 
         // Date
-        ZonedDateTime currentDateTime = ZonedDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
-        res += "Date: " + currentDateTime.format(formatter) + CRLF;
+        res += "Date: " + getCurrentDate() + CRLF;
 
         // Server
         res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
@@ -239,18 +297,56 @@ public class HTTPRequestHandler implements RequestHandler {
         return res;
     }
 
+    public String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
+        String perlInterpreter = "perl";
+        ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
+        processBuilder.environment().put("QUERY_STRING", queryString);
+        processBuilder.environment().put("REMOTE_*", remotePort);
+        processBuilder.environment().put("SERVER_*", serverPort);
+        processBuilder.environment().put("REQUEST_METHOD", method);
+
+
+        Process process = processBuilder.start();
+        InputStream inputStream = process.getInputStream();
+
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        StringBuilder output = new StringBuilder();
+
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
+        }
+
+        return output.toString();
+    }
+
     public void readCharsToRequest(char c) {
         this.request += c;
         this.lastFour[i % 4] = c;
         i++;
+        if (readingBody) {
+            expectedContentFromBody--;
+        }
     }
 
     public boolean requestCompleted() {
-        return (i > 3
+        if (readingBody && expectedContentFromBody == 0) {
+            return true;
+        } else if (!readingBody
+                && i > 3
                 && lastFour[(i-1) % 4] == '\n'
                 && lastFour[(i-2) % 4] == '\r'
                 && lastFour[(i-3) % 4] == '\n'
-                && lastFour[(i-4) % 4] == '\r');
+                && lastFour[(i-4) % 4] == '\r') {
+            parseRequest();
+            if (requestMap.containsKey("Content-length")) {
+                expectedContentFromBody = Integer.parseInt(requestMap.get("Content-length"));
+                readingBody = true;
+            } else {
+                return true;
+            }
+        }
+        return false;
     }
 
 
