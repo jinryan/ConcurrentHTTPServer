@@ -10,7 +10,7 @@ public class Main {
         if (true || (args.length == 2 && args[0].equals("-config"))) {
             // Expecting
 //            String configPath = args[1];
-            String configPath = "config.conf";
+            String configPath = "src/config.conf";
             serverConfig = ApacheConfigParser.getServerConfigFrom(configPath);
         }
         HTTPServer server = new HTTPServer(8, 8, serverConfig);

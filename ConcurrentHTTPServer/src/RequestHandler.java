@@ -61,7 +61,7 @@ public class RequestHandler {
 
             File responseFile = getFileFromPath(requestMap.get("Path"));
             response = getFileOutput(responseFile);
-            
+
         } catch (ResponseException e) {
             return e.getStatusCode() + " " + e.getMessage();
         } catch (IOException e) {
