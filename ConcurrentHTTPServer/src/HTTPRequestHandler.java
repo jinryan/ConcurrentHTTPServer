@@ -2,27 +2,44 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
-import ConfigParser.ConfigNode;
 import ConfigParser.ServerConfigObject;
 
 public class HTTPRequestHandler implements RequestHandler {
     private String request;
     public Map<String, String> requestMap;
     private final ServerConfigObject serverConfig;
+    public String filePath;
+    public String lastModifiedDate;
+    public String fileType;
 
     char[] lastFour = {0, 0, 0, 0};
     int i;
+
+    private static final Map<Integer, String> statusCodeMessages;
+
+    static {
+        statusCodeMessages = new HashMap<>();
+        statusCodeMessages.put(200, "OK");
+        statusCodeMessages.put(304, "Not Modified");
+        statusCodeMessages.put(400, "Bad Request");
+        statusCodeMessages.put(401, "Unauthorized");
+        statusCodeMessages.put(404, "Not Found");
+        statusCodeMessages.put(405, "Method Not Allowed");
+        statusCodeMessages.put(406, "Not Acceptable");
+        statusCodeMessages.put(408, "Request Timeout");
+        statusCodeMessages.put(500, "Internal Server Error");
+
+    }
 
     public HTTPRequestHandler(StringBuffer request, ServerConfigObject serverConfig) {
         this.request = request.toString();
@@ -60,28 +77,14 @@ public class HTTPRequestHandler implements RequestHandler {
         }
     }
 
-    private String processRequest() {
-        String response = "";
-
-        try {
-            if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
-                throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
-            }
-
-            if (!(requestMap.get("Method").equals("GET"))) {
-                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
-            }
-
-            File responseFile = getFileFromPath(requestMap.get("Path"));
-            response = getFileOutput(responseFile);
-
-        } catch (ResponseException e) {
-            return e.getStatusCode() + " " + e.getMessage();
-        } catch (IOException e) {
-            e.printStackTrace();
+    private void validateRequest() throws ResponseException {
+        if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
+            throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
 
-        return response;
+        if (!(requestMap.get("Method").equals("GET"))) {
+            throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+        }
     }
 
     private String getFileOutput(File responseFile) throws IOException{
@@ -96,7 +99,7 @@ public class HTTPRequestHandler implements RequestHandler {
         return content.toString();
     }
 
-    private File getFileFromPath(String path) throws ResponseException, IOException {
+    private File handleFileFromPath(String path) throws ResponseException, IOException {
         int port = 8080;
 
         String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
@@ -126,6 +129,7 @@ public class HTTPRequestHandler implements RequestHandler {
 
     private void checkType(String uri) throws ResponseException, IOException {
         String mimeType = Files.probeContentType(Paths.get(uri));
+        fileType = mimeType;
 
         if (mimeType == null)
             throw new ResponseException("Invalid file type: requested file is a folder", 406);
@@ -149,7 +153,7 @@ public class HTTPRequestHandler implements RequestHandler {
 
 
     private String getURI(String path, String documentRoot) throws ResponseException{
-        String res = "";
+        String res;
 
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
             throw new ResponseException(path + " is not a valid path", 404);
@@ -177,21 +181,62 @@ public class HTTPRequestHandler implements RequestHandler {
             throw new ResponseException(path + " is not a valid path", 404);
         }
 
+        filePath = res;
+
         return res;
     }
 
     public String getResponse() {
-//        System.out.println(request);
-        String result = processRequest();
+        //System.out.println(request);
+        try {
+            validateRequest();
+            File responseFile = handleFileFromPath(requestMap.get("Path"));
 
+            long lastModifiedTimestamp = responseFile.lastModified();
+            Date lastModifiedDateDate = new Date(lastModifiedTimestamp);
+            SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+            sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+            lastModifiedDate = sdf.format(lastModifiedDateDate);
+
+            // TODO: add if-modified-since caching here
+            String responseBody = getFileOutput(responseFile);
+            String responseHeaders = generateHeaders(200, responseBody);
+
+            return responseHeaders + responseBody;
+
+        } catch (ResponseException e) {
+            return generateHeaders(e.getStatusCode(), e.getMessage());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private String generateHeaders(int statusCode, String responseBody) {
         String CRLF = "\r\n";
-        String response =
-                "HTTP/1.1 200 OK" + CRLF +
-                        "Content-Type: text/html; charset=UTF-8" + CRLF +
-                        "Content-Length: " + result.getBytes().length + CRLF + CRLF +
-                        result;
+        String res = "";
 
-        return response;
+        // First response line
+        res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
+
+        // Date
+        ZonedDateTime currentDateTime = ZonedDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
+        res += "Date: " + currentDateTime.format(formatter) + CRLF;
+
+        // Server
+        res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
+
+        // Last-Modified
+        res += "Last-Modified: " + lastModifiedDate + CRLF;
+
+        // Content-Type
+        res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
+
+        // Content-Length
+        res += "Content-Length: " + responseBody.getBytes().length + CRLF + CRLF;
+
+        return res;
     }
 
     public void readCharsToRequest(char c) {
