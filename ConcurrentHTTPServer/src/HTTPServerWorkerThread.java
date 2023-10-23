@@ -38,6 +38,8 @@ public class HTTPServerWorkerThread implements Runnable {
         StringBuffer request = ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
 
+        System.out.println(request.toString());
+
         // Generate Response
         for (int i = 0; i < request.length(); i++) {
             char ch = request.charAt(i);
