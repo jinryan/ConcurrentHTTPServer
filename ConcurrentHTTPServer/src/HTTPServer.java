@@ -1,43 +1,50 @@
 import ConfigParser.ServerConfigObject;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.*;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import static java.lang.Thread.sleep;
 
 public class HTTPServer {
 
-    private int port;
+    private ArrayList<Integer> ports;
     private static int numWorkers;
     private static int idealAveragePerWorker;
     private static int numTotalConnections;
-    private ServerSocketChannel serverChannel;
+    private ArrayList<ServerSocketChannel> serverChannels;
     private Thread workers[];
     Scanner inputReader;
     WorkersSyncData syncData;
     ServerConfigObject serverConfig;
     public HTTPServer(int numWorkers, int idealAveragePerWorker, ServerConfigObject serverConfig) {
         HTTPServer.numWorkers = numWorkers;
-        HTTPServer.idealAveragePerWorker = idealAveragePerWorker;
+        HTTPServer.idealAveragePerWorker = serverConfig.getnSelectLoop();
         HTTPServer.numTotalConnections = numWorkers * idealAveragePerWorker;
-        this.port = 8080;
+        this.ports = serverConfig.getPorts();
         this.workers = new Thread[numWorkers];
         this.inputReader = new Scanner(System.in);
         this.serverConfig = serverConfig;
+        this.serverChannels = new ArrayList<ServerSocketChannel>();
         syncData = new WorkersSyncData(numWorkers, numTotalConnections);
     }
 
-    private void openServerChannel(int port) {
+    private void openServerChannel() {
         try {
-            serverChannel = ServerSocketChannel.open(); // Creates an unbounded socket
-            ServerSocket serversocket = serverChannel.socket();
-            InetSocketAddress address = new InetSocketAddress(port);
-            serversocket.bind(address);
-            serverChannel.configureBlocking(false);
+            for (int port : this.ports) {
+                System.out.println("Atempting to port " + port);
+                ServerSocketChannel serverChannel = ServerSocketChannel.open(); // Creates an unbounded socket
+                ServerSocket serversocket = serverChannel.socket();
+                InetSocketAddress address = new InetSocketAddress(port);
+                serversocket.bind(address);
+                serverChannel.configureBlocking(false);
+                serverChannels.add(serverChannel);
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(1);
@@ -52,10 +59,12 @@ public class HTTPServer {
             HTTPServerWorkerThread worker = new HTTPServerWorkerThread(syncData, i, serverConfig);
             Selector workerSelector = worker.getSelector();
             try {
-                serverChannel.register(workerSelector, SelectionKey.OP_ACCEPT);
-                Thread workerThread = new Thread(worker);
-                workerThread.start();
-                this.workers[i] = workerThread;
+                for (ServerSocketChannel serverChannel : this.serverChannels) {
+                    serverChannel.register(workerSelector, SelectionKey.OP_ACCEPT);
+                    Thread workerThread = new Thread(worker);
+                    workerThread.start();
+                    this.workers[i] = workerThread;
+                }
             } catch (ClosedChannelException e) {
                 e.printStackTrace();
             }
@@ -87,7 +96,7 @@ public class HTTPServer {
     }
 
     public void start() {
-        openServerChannel(this.port);
+        openServerChannel();
         startWorkerThreads();
         monitorKeyboardInput();
 

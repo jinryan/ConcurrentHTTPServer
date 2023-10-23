@@ -1,17 +1,12 @@
 import ConfigParser.ServerConfigObject;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 public class HTTPServerWorkerThread implements Runnable {
@@ -43,17 +38,15 @@ public class HTTPServerWorkerThread implements Runnable {
         StringBuffer request = ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
 
-        RequestHandler requestHandler = new RequestHandler(request, serverConfig);
+        RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
-        String response = requestHandler.handleRequest();
+        String response = requestHandler.getResponse();
 
         // Generate Response
         for (int i = 0; i < response.length(); i++) {
             char ch = response.charAt(i);
             writeBuffer.put((byte) ch);
         }
-
-        // CGI Test
 
 
         // Update state
@@ -80,21 +73,16 @@ public class HTTPServerWorkerThread implements Runnable {
             ccb.setConnectionState(ConnectionState.READ);
         } else {
             readBuffer.flip();
-
+            RequestHandler requestHandler = ccb.getRequestHandler();
             while (ccb.getConnectionState() != ConnectionState.READ
                     && readBuffer.hasRemaining()
                     && request.length() < request.capacity()) {
                 char ch = (char) readBuffer.get();
-                request.append(ch);
-                ccb.lastFour[ccb.i % 4] = ch;
-                if (ccb.i >= 3
-                        && ccb.lastFour[ccb.i % 4] == '\n'
-                        && ccb.lastFour[(ccb.i-1) % 4] == '\r'
-                        && ccb.lastFour[(ccb.i-2) % 4] == '\n'
-                        && ccb.lastFour[(ccb.i-3) % 4] == '\r') {
+                requestHandler.readCharsToRequest(ch);
+
+                if (requestHandler.requestCompleted()) {
                     ccb.setConnectionState(ConnectionState.READ);
                 }
-                ccb.i++;
             }
         }
         readBuffer.clear();
@@ -116,15 +104,12 @@ public class HTTPServerWorkerThread implements Runnable {
     private boolean overloaded() {
         synchronized (syncData) {
             double averageConnectionPerWorker = (double) syncData.getNumConnections() / (double) syncData.getNumWorkers();
-//            System.out.println(workerID + " received accept. Active: " + numActiveConnections + " Total: " + syncData.getNumConnections() + " # Workers: " + syncData.getNumWorkers() + " Accept: " + (numActiveConnections > averageConnectionPerWorker));
-
             return (numActiveConnections > averageConnectionPerWorker);
         }
     }
 
     private boolean serverIsRunning() {
         synchronized (syncData) {
-//            System.out.println("Server running: " + syncData.getServerIsRunning());
             return syncData.getServerIsRunning();
         }
     }
@@ -166,6 +151,8 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         // Create CCB
                         ConnectionControlBlock ccb = new ConnectionControlBlock();
+                        HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig);
+                        ccb.setRequestHandler(httpRequestHandler);
                         ccb.setConnectionState(ConnectionState.READING);
 
                         // Attach to key
@@ -174,11 +161,13 @@ public class HTTPServerWorkerThread implements Runnable {
 
                     // ==================== Read =================
                     if (key.isReadable()) {
+
                         // Should not be reading if we're not in reading state
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                         if (ccb.getConnectionState() != ConnectionState.READING) {
                             continue;
                         }
+
 
                         // Get channel
                         SocketChannel client = (SocketChannel) key.channel();
@@ -201,6 +190,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         if (ccb.getConnectionState() != ConnectionState.WRITE) {
                             continue;
                         }
+
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
                         updateCCBOnWrite(writeBytes, ccb);
@@ -210,7 +200,6 @@ public class HTTPServerWorkerThread implements Runnable {
                             if (ccb.isKeepConnectionAlive()) {
                                 ccb.setConnectionState(ConnectionState.READING);
                             } else {
-
                                 closeSocket(client);
                             }
 

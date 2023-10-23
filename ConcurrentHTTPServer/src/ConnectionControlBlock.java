@@ -10,6 +10,8 @@ public class ConnectionControlBlock {
     private StringBuffer request;
     private ConnectionState connectionState;
     private boolean keepConnectionAlive;
+
+    private RequestHandler requestHandler = null;
     char[] lastFour;
     int i = 0;
     public ConnectionControlBlock() {
@@ -57,5 +59,13 @@ public class ConnectionControlBlock {
 
     public void updateConnectionState() {
 
+    }
+
+    public RequestHandler getRequestHandler() {
+        return requestHandler;
+    }
+
+    public void setRequestHandler(RequestHandler requestHandler) {
+        this.requestHandler = requestHandler;
     }
 }
