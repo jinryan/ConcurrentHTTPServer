@@ -1,12 +1,15 @@
 import ConfigParser.ServerConfigObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 public class HTTPServerWorkerThread implements Runnable {
@@ -47,6 +50,9 @@ public class HTTPServerWorkerThread implements Runnable {
             writeBuffer.put((byte) ch);
         }
 
+        // CGI Test
+
+
         // Update state
         writeBuffer.flip();
         ccb.setConnectionState(ConnectionState.WRITE);
@@ -71,14 +77,22 @@ public class HTTPServerWorkerThread implements Runnable {
             ccb.setConnectionState(ConnectionState.READ);
         } else {
             readBuffer.flip();
+            char[] last_four = new char[4];
+            int i = 0;
             while (ccb.getConnectionState() != ConnectionState.READ
                     && readBuffer.hasRemaining()
                     && request.length() < request.capacity()) {
                 char ch = (char) readBuffer.get();
                 request.append(ch);
-                if (ch == '\r' || ch == '\n') {
+                last_four[i % 4] = ch;
+                if (i >= 3
+                        && last_four[i % 4] == '\n'
+                        && last_four[(i-1) % 4] == '\r'
+                        && last_four[(i-2) % 4] == '\n'
+                        && last_four[(i-3) % 4] == '\r') {
                     ccb.setConnectionState(ConnectionState.READ);
                 }
+                i++;
             }
         }
         readBuffer.clear();
@@ -100,7 +114,7 @@ public class HTTPServerWorkerThread implements Runnable {
     private boolean overloaded() {
         synchronized (syncData) {
             double averageConnectionPerWorker = (double) syncData.getNumConnections() / (double) syncData.getNumWorkers();
-            System.out.println(workerID + " received accept. Active: " + numActiveConnections + " Total: " + syncData.getNumConnections() + " # Workers: " + syncData.getNumWorkers() + " Accept: " + (numActiveConnections > averageConnectionPerWorker));
+//            System.out.println(workerID + " received accept. Active: " + numActiveConnections + " Total: " + syncData.getNumConnections() + " # Workers: " + syncData.getNumWorkers() + " Accept: " + (numActiveConnections > averageConnectionPerWorker));
 
             return (numActiveConnections > averageConnectionPerWorker);
         }

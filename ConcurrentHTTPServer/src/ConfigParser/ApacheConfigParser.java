@@ -93,7 +93,6 @@ public class ApacheConfigParser {
 			ConfigNode config = parse(inputStream);
 			for (ConfigNode child : config.getChildren()) {
 				String serverName = null, documentRoot = null;
-				System.out.println("For " + child.getName() + ": " + child.getContent());
 
 				if (child.getName().equals("Listen")) {
 					port = Integer.parseInt(child.getContent());
