@@ -82,7 +82,7 @@ public class RequestHandler {
     private File getFileFromPath(String path) throws ResponseException {
         
         String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), 8080);
-        if (documentRoot == null)
+        if (requestMap.get("Host") == null)
             documentRoot = serverConfig.getRootFrom("First", 8080);
             
         System.out.println(documentRoot);
