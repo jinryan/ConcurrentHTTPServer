@@ -5,12 +5,17 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import ConfigParser.ConfigNode;
+import ConfigParser.ServerConfigObject;
+
 public class RequestHandler {
     private String request;
     public Map<String, String> requestMap;
+    private ServerConfigObject serverConfig;
 
-    public RequestHandler(StringBuffer request) {
+    public RequestHandler(StringBuffer request, ServerConfigObject serverConfig) {
         this.request = request.toString();
+        this.serverConfig = serverConfig;
         requestMap = new HashMap<>();
     }
 
@@ -75,8 +80,13 @@ public class RequestHandler {
     }
 
     private File getFileFromPath(String path) throws ResponseException {
-        String baseDirectory = "../../www";
+        
+        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), 8080);
+        System.out.println(documentRoot);
+
+        String baseDirectory = "../../" + documentRoot;
         File res;
+        System.out.println(baseDirectory + "/index.html");
 
         // TODO: MIME checking
         // TODO: security attack handling (../)
@@ -95,6 +105,7 @@ public class RequestHandler {
     }
 
     public String handleRequest() {
+        System.out.println(request);
         String result = processRequest();
 
         String CRLF = "\r\n";
