@@ -80,10 +80,11 @@ public class RequestHandler {
     }
 
     private File getFileFromPath(String path) throws ResponseException {
-        
-        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), 8080);
+        int port = 8080;
+
+        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
         if (requestMap.get("Host") == null)
-            documentRoot = serverConfig.getRootFrom("First", 8080);
+            documentRoot = serverConfig.getFirstRoot(port);
             
         System.out.println(documentRoot);
 
