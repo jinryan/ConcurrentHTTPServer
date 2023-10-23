@@ -1,7 +1,10 @@
+import ConfigParser.ServerConfigObject;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.*;
+import java.util.HashMap;
 import java.util.Scanner;
 
 import static java.lang.Thread.sleep;
@@ -16,13 +19,15 @@ public class HTTPServer {
     private Thread workers[];
     Scanner inputReader;
     WorkersSyncData syncData;
-    public HTTPServer(int numWorkers, int idealAveragePerWorker) {
+    ServerConfigObject serverConfig;
+    public HTTPServer(int numWorkers, int idealAveragePerWorker, ServerConfigObject serverConfig) {
         HTTPServer.numWorkers = numWorkers;
         HTTPServer.idealAveragePerWorker = idealAveragePerWorker;
         HTTPServer.numTotalConnections = numWorkers * idealAveragePerWorker;
         this.port = 8080;
         this.workers = new Thread[numWorkers];
         this.inputReader = new Scanner(System.in);
+        this.serverConfig = serverConfig;
         syncData = new WorkersSyncData(numWorkers, numTotalConnections);
     }
 
@@ -44,7 +49,7 @@ public class HTTPServer {
 
     private void startWorkerThreads() {
         for (int i = 0; i < numWorkers; i++) {
-            HTTPServerWorkerThread worker = new HTTPServerWorkerThread(syncData, i);
+            HTTPServerWorkerThread worker = new HTTPServerWorkerThread(syncData, i, serverConfig);
             Selector workerSelector = worker.getSelector();
             try {
                 serverChannel.register(workerSelector, SelectionKey.OP_ACCEPT);

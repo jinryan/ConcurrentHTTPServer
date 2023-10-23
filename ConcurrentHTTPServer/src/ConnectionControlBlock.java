@@ -9,11 +9,13 @@ public class ConnectionControlBlock {
     private ByteBuffer writeBuffer;
     private StringBuffer request;
     private ConnectionState connectionState;
+    private boolean keepConnectionAlive;
     public ConnectionControlBlock() {
         this.readBuffer = ByteBuffer.allocate(defaultBufferSize);
         this.writeBuffer = ByteBuffer.allocate(defaultBufferSize);
         this.connectionState = ConnectionState.ACCEPT;
         this.request = new StringBuffer(defaultBufferSize);
+        this.keepConnectionAlive = false;
     }
 
     public ConnectionControlBlock(int bufferSize) {
@@ -40,6 +42,14 @@ public class ConnectionControlBlock {
 
     public StringBuffer getRequest() {
         return request;
+    }
+
+    public void setKeepConnectionAlive(boolean keepConnectionAlive) {
+        this.keepConnectionAlive = keepConnectionAlive;
+    }
+
+    public boolean isKeepConnectionAlive() {
+        return keepConnectionAlive;
     }
 
     public void updateConnectionState() {

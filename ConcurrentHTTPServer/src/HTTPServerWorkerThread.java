@@ -1,3 +1,5 @@
+import ConfigParser.ServerConfigObject;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -10,14 +12,15 @@ import java.util.Set;
 public class HTTPServerWorkerThread implements Runnable {
 
     private Selector selector;
-    private boolean stop;
     private int workerID;
 
     final WorkersSyncData syncData;
     private int numActiveConnections = 0;
 
-    public HTTPServerWorkerThread(WorkersSyncData syncdata, int workerID) {
-        this.stop = false;
+    ServerConfigObject serverConfig;
+
+    public HTTPServerWorkerThread(WorkersSyncData syncdata, int workerID, ServerConfigObject serverConfig) {
+        this.serverConfig = serverConfig;
         this.workerID = workerID;
         this.syncData = syncdata;
         try {
@@ -47,6 +50,9 @@ public class HTTPServerWorkerThread implements Runnable {
         // Update state
         writeBuffer.flip();
         ccb.setConnectionState(ConnectionState.WRITE);
+
+        // Keep Connection Alive
+        // ccb.setKeepConnectionAlive(true);
     }
 
     private void closeSocket(SocketChannel socketChannel) {
@@ -179,7 +185,13 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.WRITTEN) {
-                            closeSocket(client);
+                            // Unless keep connection alive
+                            if (ccb.isKeepConnectionAlive()) {
+                                ccb.setConnectionState(ConnectionState.READING);
+                            } else {
+                                closeSocket(client);
+                            }
+
                         }
                     }
                 } catch (IOException e) {
@@ -189,7 +201,4 @@ public class HTTPServerWorkerThread implements Runnable {
         }
     }
 
-    public void stop() {
-        stop = true;
-    }
 }
