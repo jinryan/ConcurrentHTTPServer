@@ -1,3 +1,6 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -55,7 +58,9 @@ public class HTTPConnectionWorkerThread extends Thread {
     }
 
     public static String processRequest(String request) {
+        String response = "";
         Map<String, String> requestMap = parseRequest(request);
+
         try {
             if (!(requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1"))) {
                 throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
@@ -65,18 +70,53 @@ public class HTTPConnectionWorkerThread extends Thread {
                 throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
             }
 
+            File responseFile = getFileFromPath(requestMap.get("Path"));
+            response = getFileOutput(responseFile);
             
         } catch (ResponseException e) {
             return e.getStatusCode() + " " + e.getMessage();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        String response = "";
-        
-        for (Map.Entry<String, String> entry : requestMap.entrySet()) {
-            response += entry.getKey() + ": " + entry.getValue();
-        }
         return response;
     }
+
+    private static String getFileOutput(File responseFile) throws IOException{
+        StringBuilder content = new StringBuilder();
+        BufferedReader reader = new BufferedReader(new FileReader(responseFile));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            content.append(line);
+            content.append(System.lineSeparator());
+        }
+        reader.close();
+        return content.toString();
+    }
+
+
+
+    private static File getFileFromPath(String path) throws ResponseException {
+        String baseDirectory = "./www";
+        File res;
+
+        // TODO: MIME checking
+        // TODO: security attack handling (../)
+
+        if (path.equals("/")) {
+            res = new File(baseDirectory + "/index.html");
+        } else {
+            res = new File(baseDirectory + path);
+        }
+
+        if (!res.exists()){
+            throw new ResponseException(path + " could not be found", 404);
+        }
+
+        return res;
+    }
+
+
 
     @Override
     public void run() {
@@ -84,13 +124,10 @@ public class HTTPConnectionWorkerThread extends Thread {
             InputStream inputStream = socket.getInputStream();
             OutputStream outputStream = socket.getOutputStream();
 
-            String getRequest = "GET /api/books HTTP/1.2\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\r\nAccept: application/json\r\n\r\n";
+            String getRequest = "GET /test.txt HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\r\nAccept: application/json\r\n\r\n";
             // String postRequest = "POST /api/books HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36\r\nContent-Type: application/json\r\nContent-Length: 35\r\n\r\n{\r\n  \"title\": \"Java Programming\",\r\n  \"author\": \"John Doe\"\r\n}";
             String result = processRequest(getRequest);
 
-
-            // TODO we would write
-            String html = "<html><head><title>Simple HTTP Server</title></head><body><h1>Hello World 1</h1></body></html>";
 
             final String CRLF = "\r\n"; // 13, 10 in ASCII
             // Need to wrap string in HTTP response
