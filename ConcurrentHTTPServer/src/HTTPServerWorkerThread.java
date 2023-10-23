@@ -38,11 +38,20 @@ public class HTTPServerWorkerThread implements Runnable {
         StringBuffer request = ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
 
-        System.out.println(request.toString());
+        String CRLF = "\r\n"; // 13, 10 in ASCII
+        String result = request.toString();
+        String response =
+            "HTTP/1.1 200 OK" + CRLF +
+            "Content-Type: text/html; charset=UTF-8" + CRLF +
+            "Content-Length: " + result.getBytes().length + CRLF + CRLF +
+            result + CRLF ;
+            
+        System.out.println(response);
+
 
         // Generate Response
-        for (int i = 0; i < request.length(); i++) {
-            char ch = request.charAt(i);
+        for (int i = 0; i < response.length(); i++) {
+            char ch = response.charAt(i);
 
             ch = Character.toUpperCase(ch);
 
