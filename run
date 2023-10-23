@@ -1,0 +1,4 @@
+#!/bin/bash
+
+javac HTTPConnectionWorkerThread.java
+java HTTPServer.java

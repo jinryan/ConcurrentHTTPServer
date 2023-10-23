@@ -1,12 +1,17 @@
 import ConfigParser.ServerConfigObject;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 public class HTTPServerWorkerThread implements Runnable {
@@ -34,12 +39,100 @@ public class HTTPServerWorkerThread implements Runnable {
         return selector;
     }
 
+    public static Map<String, String> parseRequest(String httpRequest) {
+        Map<String, String> requestMap = new HashMap<>();
+        String[] lines = httpRequest.split("\\r\\n");
+        String[] requestLine = lines[0].split(" ");
+        requestMap.put("Method", requestLine[0]);
+        requestMap.put("Path", requestLine[1]);
+        requestMap.put("Version", requestLine[2]);
+        int bodyStartIndex = -1;
+        for (int i = 1; i < lines.length; i++) {
+            if (lines[i].isEmpty()) {
+                bodyStartIndex = i + 1;
+                break;
+            }
+            String[] header = lines[i].split(": ");
+            requestMap.put(header[0], header[1]);
+        }
+        if (bodyStartIndex != -1 && bodyStartIndex < lines.length) {
+            StringBuilder bodyBuilder = new StringBuilder();
+            for (int i = bodyStartIndex; i < lines.length; i++) {
+                bodyBuilder.append(lines[i]);
+            }
+            requestMap.put("Body", bodyBuilder.toString());
+        }
+        return requestMap;
+    }
+
+    public static String processRequest(String request) {
+        String response = "";
+        Map<String, String> requestMap = parseRequest(request);
+
+        try {
+            // if (!(requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1"))) {
+            //     System.out.println(requestMap.get("Version").endsWith("1.1"));
+            //     System.out.println(requestMap.get("Version"));
+            //     System.out.println(requestMap.get("Version").replace("\\", "\\\\"));
+            //     throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
+            // }
+
+            if (!(requestMap.get("Method").equals("GET"))) {
+                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+            }
+
+            File responseFile = getFileFromPath(requestMap.get("Path"));
+            response = getFileOutput(responseFile);
+            
+        } catch (ResponseException e) {
+            return e.getStatusCode() + " " + e.getMessage();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return response;
+    }
+
+    private static String getFileOutput(File responseFile) throws IOException{
+        StringBuilder content = new StringBuilder();
+        BufferedReader reader = new BufferedReader(new FileReader(responseFile));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            content.append(line);
+            content.append(System.lineSeparator());
+        }
+        reader.close();
+        return content.toString();
+    }
+
+    private static File getFileFromPath(String path) throws ResponseException {
+        String baseDirectory = "../../www";
+        File res;
+
+        // TODO: MIME checking
+        // TODO: security attack handling (../)
+
+        if (path.equals("/")) {
+            res = new File(baseDirectory + "/index.html");
+        } else {
+            res = new File(baseDirectory + path);
+        }
+
+        if (!res.exists()){
+            throw new ResponseException(path + " could not be found", 404);
+        }
+
+        return res;
+    }
+
     private void generateResponse(ConnectionControlBlock ccb) {
         StringBuffer request = ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
 
-        String CRLF = "\r\n"; // 13, 10 in ASCII
-        String result = request.toString();
+        String result = processRequest(request.toString());
+        System.out.println(result);
+
+        String CRLF = "\r\n";
         String response =
             "HTTP/1.1 200 OK" + CRLF +
             "Content-Type: text/html; charset=UTF-8" + CRLF +

@@ -1,3 +1,7 @@
+**/*.class
+run
+
+
 ### IntelliJ IDEA ###
 out/
 !**/src/main/**/out/
