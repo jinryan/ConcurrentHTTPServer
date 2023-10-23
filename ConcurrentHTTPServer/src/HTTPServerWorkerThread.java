@@ -70,12 +70,9 @@ public class HTTPServerWorkerThread implements Runnable {
         Map<String, String> requestMap = parseRequest(request);
 
         try {
-            // if (!(requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1"))) {
-            //     System.out.println(requestMap.get("Version").endsWith("1.1"));
-            //     System.out.println(requestMap.get("Version"));
-            //     System.out.println(requestMap.get("Version").replace("\\", "\\\\"));
-            //     throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
-            // }
+            if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
+                throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
+            }
 
             if (!(requestMap.get("Method").equals("GET"))) {
                 throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
