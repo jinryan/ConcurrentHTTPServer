@@ -106,7 +106,7 @@ public class HTTPServerWorkerThread implements Runnable {
     }
 
     private static File getFileFromPath(String path) throws ResponseException {
-        String baseDirectory = "../../www";
+        String baseDirectory = "../www";
         File res;
 
         // TODO: MIME checking
@@ -128,9 +128,8 @@ public class HTTPServerWorkerThread implements Runnable {
     private void generateResponse(ConnectionControlBlock ccb) {
         StringBuffer request = ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
-
         String result = processRequest(request.toString());
-        System.out.println(result);
+//        System.out.println(result);
 
         String CRLF = "\r\n";
         String response =
@@ -138,8 +137,6 @@ public class HTTPServerWorkerThread implements Runnable {
             "Content-Type: text/html; charset=UTF-8" + CRLF +
             "Content-Length: " + result.getBytes().length + CRLF + CRLF +
             result + CRLF ;
-            
-        System.out.println(response);
 
 
         // Generate Response
@@ -178,22 +175,21 @@ public class HTTPServerWorkerThread implements Runnable {
             ccb.setConnectionState(ConnectionState.READ);
         } else {
             readBuffer.flip();
-            char[] last_four = new char[4];
-            int i = 0;
+
             while (ccb.getConnectionState() != ConnectionState.READ
                     && readBuffer.hasRemaining()
                     && request.length() < request.capacity()) {
                 char ch = (char) readBuffer.get();
                 request.append(ch);
-                last_four[i % 4] = ch;
-                if (i >= 3
-                        && last_four[i % 4] == '\n'
-                        && last_four[(i-1) % 4] == '\r'
-                        && last_four[(i-2) % 4] == '\n'
-                        && last_four[(i-3) % 4] == '\r') {
+                ccb.lastFour[ccb.i % 4] = ch;
+                if (ccb.i >= 3
+                        && ccb.lastFour[ccb.i % 4] == '\n'
+                        && ccb.lastFour[(ccb.i-1) % 4] == '\r'
+                        && ccb.lastFour[(ccb.i-2) % 4] == '\n'
+                        && ccb.lastFour[(ccb.i-3) % 4] == '\r') {
                     ccb.setConnectionState(ConnectionState.READ);
                 }
-                i++;
+                ccb.i++;
             }
         }
         readBuffer.clear();
@@ -220,9 +216,16 @@ public class HTTPServerWorkerThread implements Runnable {
             return (numActiveConnections > averageConnectionPerWorker);
         }
     }
+
+    private boolean serverIsRunning() {
+        synchronized (syncData) {
+//            System.out.println("Server running: " + syncData.getServerIsRunning());
+            return syncData.getServerIsRunning();
+        }
+    }
     public void run() {
         System.out.println("Worker #" + workerID + " listening");
-        while (syncData.getServerIsRunning()) {
+        while (serverIsRunning()) {
             try {
                 selector.select(); // Blocking operation, returns only after a channel is selected
             } catch (IOException e) {
@@ -250,7 +253,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
 
                         numActiveConnections++;
-                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
+                        System.out.println("\n\n\n\nWorker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 
                         // Register selector
@@ -266,7 +269,6 @@ public class HTTPServerWorkerThread implements Runnable {
 
                     // ==================== Read =================
                     if (key.isReadable()) {
-
                         // Should not be reading if we're not in reading state
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                         if (ccb.getConnectionState() != ConnectionState.READING) {
@@ -297,13 +299,13 @@ public class HTTPServerWorkerThread implements Runnable {
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
                         updateCCBOnWrite(writeBytes, ccb);
-
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.WRITTEN) {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 ccb.setConnectionState(ConnectionState.READING);
                             } else {
+
                                 closeSocket(client);
                             }
 
@@ -312,6 +314,14 @@ public class HTTPServerWorkerThread implements Runnable {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            }
+        }
+
+        for (SelectionKey key : selector.keys()) {
+            try {
+                key.channel().close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }

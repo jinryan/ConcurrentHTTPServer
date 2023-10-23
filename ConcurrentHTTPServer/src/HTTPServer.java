@@ -79,6 +79,7 @@ public class HTTPServer {
             String myinput = inputReader.nextLine();
             System.out.println("You entered " + myinput);
             if (myinput.equals("quit") || myinput.equals("stop")) {
+                System.out.println("Quit server");
                 quitServer = true;
             }
         }
