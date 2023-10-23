@@ -43,7 +43,7 @@ public class HTTPServerWorkerThread implements Runnable {
         StringBuffer request = ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
 
-        RequestHandler requestHandler = new RequestHandler(request);
+        RequestHandler requestHandler = new RequestHandler(request, serverConfig);
         requestHandler.parseRequest();
         String response = requestHandler.handleRequest();
 
