@@ -153,6 +153,12 @@ public class HTTPRequestHandler implements RequestHandler {
     private String getURI(String path, String documentRoot) throws ResponseException{
         String res = "";
 
+        // Redirecting empty to index.html
+        if (path.equals("/")) {
+            path = "/index.html";
+        }
+
+
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
             throw new ResponseException(path + " is not a valid path", 404);
 
@@ -164,6 +170,7 @@ public class HTTPRequestHandler implements RequestHandler {
         } else {
             res = currentAbsolutePath + "/../" + documentRoot + path;
         }
+        System.out.println(res);
 
         if (requestMap.get("User-Agent") != null && path.equals("/") && requestMap.get("User-Agent").contains("iPhone")) {
             Path testPath = Paths.get(currentAbsolutePath + "/../" + documentRoot + path + "index_m.html");
@@ -174,7 +181,8 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // Check for malformed path
         try {
-            new URI(res);
+            String encodedRes = res.replace(" ", "%20");
+            new URI("file://" + encodedRes);
         } catch (URISyntaxException e) {
             throw new ResponseException(path + " is not a valid path", 404);
         }
