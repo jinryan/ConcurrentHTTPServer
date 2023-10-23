@@ -77,7 +77,7 @@ public class ApacheConfigParser {
 				String name = directiveMatcher.group(1);
 				String content = directiveMatcher.group(2);
 				ConfigNode.createChildNode(name, content, currentNode);
-			} // TODO: Should an exception be thrown for unknown lines?
+			}
 		}
 
 		return currentNode;
