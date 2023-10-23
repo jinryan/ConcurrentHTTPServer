@@ -96,7 +96,6 @@ public class RequestHandler {
 
     public String handleRequest() {
         String result = processRequest();
-        System.out.println(result);
 
         String CRLF = "\r\n";
         String response =
@@ -105,8 +104,6 @@ public class RequestHandler {
             "Content-Length: " + result.getBytes().length + CRLF + CRLF +
             result;
             
-        System.out.println(response);
-        System.out.println("hey");
         return response;
     }
 
