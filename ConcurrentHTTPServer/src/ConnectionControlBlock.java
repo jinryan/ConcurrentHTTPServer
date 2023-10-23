@@ -12,15 +12,12 @@ public class ConnectionControlBlock {
     private boolean keepConnectionAlive;
 
     private RequestHandler requestHandler = null;
-    char[] lastFour;
-    int i = 0;
     public ConnectionControlBlock() {
         this.readBuffer = ByteBuffer.allocate(defaultBufferSize);
         this.writeBuffer = ByteBuffer.allocate(defaultBufferSize);
         this.connectionState = ConnectionState.ACCEPT;
         this.request = new StringBuffer(defaultBufferSize);
         this.keepConnectionAlive = false;
-        this.lastFour = new char[4];
     }
 
     public ConnectionControlBlock(int bufferSize) {

@@ -1,11 +1,10 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,6 +20,8 @@ public class HTTPRequestHandler implements RequestHandler {
     public Map<String, String> requestMap;
     private final ServerConfigObject serverConfig;
 
+    private SocketChannel socketChannel;
+
     char[] lastFour = {0, 0, 0, 0};
     int i;
 
@@ -30,10 +31,11 @@ public class HTTPRequestHandler implements RequestHandler {
         this.requestMap = new HashMap<>();
     }
 
-    public HTTPRequestHandler(ServerConfigObject serverConfig) {
+    public HTTPRequestHandler(ServerConfigObject serverConfig, SocketChannel socketChannel) {
         this.serverConfig = serverConfig;
         this.requestMap = new HashMap<>();
         this.request = "";
+        this.socketChannel = socketChannel;
     }
 
     public void parseRequest() {
@@ -192,6 +194,29 @@ public class HTTPRequestHandler implements RequestHandler {
                         result;
 
         return response;
+    }
+
+    public String runCGIProgram(String programPath, String queryString, int remotePort, int serverPort, String method) throws IOException {
+        String perlInterpreter = "perl";
+        ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
+        processBuilder.environment().put("QUERY_STRING", queryString);
+        processBuilder.environment().put("REMOTE_*", String.valueOf(remotePort));
+        processBuilder.environment().put("SERVER_*", String.valueOf(serverPort));
+        processBuilder.environment().put("REQUEST_METHOD", method);
+
+
+        Process process = processBuilder.start();
+        InputStream inputStream = process.getInputStream();
+
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        StringBuilder output = new StringBuilder();
+
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
+        }
+
+        return output.toString();
     }
 
     public void readCharsToRequest(char c) {

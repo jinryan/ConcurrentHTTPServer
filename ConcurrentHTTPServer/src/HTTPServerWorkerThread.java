@@ -145,15 +145,19 @@ public class HTTPServerWorkerThread implements Runnable {
                         numActiveConnections++;
                         System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
+                        client.socket().setSoTimeout(3000);
 
                         // Register selector
                         SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
                         // Create CCB
                         ConnectionControlBlock ccb = new ConnectionControlBlock();
-                        HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig);
-                        ccb.setRequestHandler(httpRequestHandler);
                         ccb.setConnectionState(ConnectionState.READING);
+
+                        // Set HTTP Request Handler
+                        HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
+                        ccb.setRequestHandler(httpRequestHandler);
+
 
                         // Attach to key
                         clientKey.attach(ccb);
