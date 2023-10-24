@@ -54,11 +54,6 @@ public class HTTPServerWorkerThread implements Runnable {
         // Update state
         writeBuffer.flip();
         ccb.setConnectionState(ConnectionState.WRITE);
-
-        // Keep Connection Alive
-        if (requestHandler.keepAlive()) {
-            ccb.setKeepConnectionAlive(true);
-        }
     }
 
     private void closeSocket(SocketChannel socketChannel) {
@@ -169,13 +164,13 @@ public class HTTPServerWorkerThread implements Runnable {
 
                     // ==================== Read =================
                     if (key.isReadable()) {
-
                         // Should not be reading if we're not in reading state
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                         if (ccb.getConnectionState() != ConnectionState.READING) {
                             continue;
                         }
 
+                        System.out.println(4);
 
                         // Get channel
                         SocketChannel client = (SocketChannel) key.channel();
@@ -192,12 +187,13 @@ public class HTTPServerWorkerThread implements Runnable {
 
                     // ==================== Write =================
                     if (key.isWritable()) {
-
                         // Should be in write state
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                         if (ccb.getConnectionState() != ConnectionState.WRITE) {
                             continue;
                         }
+
+                        System.out.println(5);
 
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
@@ -205,8 +201,13 @@ public class HTTPServerWorkerThread implements Runnable {
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.WRITTEN) {
                             // Unless keep connection alive
+                            System.out.println(1);
                             if (ccb.isKeepConnectionAlive()) {
+                                System.out.println(2);
+                                ccb.resetState();
+                                ccb.setLastReadTime(System.currentTimeMillis());
                                 ccb.setConnectionState(ConnectionState.READING);
+
                             } else {
                                 closeSocket(client);
                             }
