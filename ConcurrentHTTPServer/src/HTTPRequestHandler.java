@@ -66,8 +66,12 @@ public class HTTPRequestHandler implements RequestHandler {
         this.socketChannel = socketChannel;
     }
 
+    public boolean keepAlive() {
+        return requestMap.get("Connection") != null && requestMap.get("Connection").equals("keep-alive");
+    }
+
     public void parseRequest() {
-        System.out.println("Request is\n========\n" + this.request + "========\n");
+//        System.out.println("Request is\n========\n" + this.request + "========\n");
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
         requestMap.put("Method", requestLine[0]);
@@ -201,7 +205,6 @@ public class HTTPRequestHandler implements RequestHandler {
         String documentRoot = null;
 
         for (int port : ports) {
-            System.out.println(port);
             documentRoot = getDocumentRoot(port);
             if (documentRoot != null) {
                 break;

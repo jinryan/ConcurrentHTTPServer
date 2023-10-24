@@ -87,8 +87,8 @@ public class HTTPServer {
         while (!quitServer) {
             String myinput = inputReader.nextLine();
             System.out.println("You entered " + myinput);
-            if (myinput.equals("quit") || myinput.equals("stop")) {
-                System.out.println("Quit server");
+            if (myinput.equals("shutdown") || myinput.equals("stop")) {
+                System.out.println("Server is shutting down");
                 quitServer = true;
             }
         }
