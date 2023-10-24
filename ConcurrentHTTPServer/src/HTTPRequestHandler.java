@@ -117,7 +117,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
 
     private boolean compareDates() {
-        System.out.println("yep");
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
             Date fileDate = sdf.parse(lastModifiedDate);
@@ -132,6 +131,8 @@ public class HTTPRequestHandler implements RequestHandler {
     private String processGET() throws ResponseException, IOException {
         String response;
         File responseFile = getPath(requestMap.get("Path"));
+        checkType(filePath);
+
         lastModifiedDate = getLastModifiedDate(responseFile);
         if (requestMap.get("If-Modified-Since") != null) {
             if (compareDates()) {
@@ -229,21 +230,22 @@ public class HTTPRequestHandler implements RequestHandler {
         if (mimeType == null)
             throw new ResponseException("Invalid file type: requested file is a folder", 406);
 
-        String[] types = requestMap.get("Accept").split(",\\s*");
+        if (requestMap.get("Accept") != null) {
+            String[] types = requestMap.get("Accept").split(",\\s*");
 
-        String mimeStart = mimeType.substring(0, mimeType.indexOf("/"));
-        String mimeEnd = mimeType.substring(mimeType.indexOf("/") + 1);
+            String mimeStart = mimeType.substring(0, mimeType.indexOf("/"));
+            String mimeEnd = mimeType.substring(mimeType.indexOf("/") + 1);
 
-        for (String type : types) {
-            String typeStart = type.substring(0, type.indexOf("/"));
-            String typeEnd  = type.substring(type.indexOf("/") + 1);
-            if ((typeStart.equals(mimeStart) || typeStart.equals("*")) && (typeEnd.equals(mimeEnd) || typeEnd.equals("*"))) {
-                return;
+            for (String type : types) {
+                String typeStart = type.substring(0, type.indexOf("/"));
+                String typeEnd  = type.substring(type.indexOf("/") + 1);
+                if ((typeStart.equals(mimeStart) || typeStart.equals("*")) && (typeEnd.equals(mimeEnd) || typeEnd.equals("*"))) {
+                    return;
+                }
             }
+
+            throw new ResponseException("Invalid file type " + mimeType, 406);
         }
-
-        throw new ResponseException("Invalid file type " + mimeType, 406);
-
     }
 
 
@@ -292,7 +294,6 @@ public class HTTPRequestHandler implements RequestHandler {
             assert responseBody != null;
             return generateHeaders(200, responseBody);
         } catch (ResponseException e) {
-            System.out.println("yay" + e.getStatusCode() + e.getMessage());
             return generateHeaders(e.getStatusCode(), e.getMessage());
         }
     }
@@ -307,18 +308,18 @@ public class HTTPRequestHandler implements RequestHandler {
 
             // check if auth header exists and is valid
             if (!(requestMap.get("Authorization") != null && requestMap.get("Authorization").startsWith("Basic "))) {
-                throw new ResponseException(htaccessMap.get("AuthName"), 401);
+                throw new ResponseException("~" + htaccessMap.get("AuthName"), 401);
             } else {
                 // decode auth header
                 String encodedAuth = requestMap.get("Authorization").substring(requestMap.get("Authorization").indexOf(" ") + 1);
                 byte[] decodedBytes = Base64.getDecoder().decode(encodedAuth);
                 String decodedString = new String(decodedBytes);
                 String[] credentials = decodedString.split(":");
+                if (credentials.length != 2)
+                    throw new ResponseException(htaccessMap.get("AuthName"), 401);
+
                 String username = credentials[0];
                 String password = credentials[1];
-
-                System.out.println(username);
-                System.out.println(password);
 
                 // check that username and password match
                 if (!username.equals(htaccessMap.get("User")) || !password.equals(htaccessMap.get("Password"))) {
@@ -350,6 +351,7 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private String generateHeaders(int statusCode, String responseBody) {
+        boolean missingPassword = false;
         String CRLF = "\r\n";
         String res = "";
 
@@ -365,14 +367,19 @@ public class HTTPRequestHandler implements RequestHandler {
         // Last-Modified
         res += "Last-Modified: " + lastModifiedDate + CRLF;
 
+        // Optional WWW-Authenticate
+        if ((statusCode == 401) && (responseBody.charAt(0) == '~')) {
+            res += "WWW-Authenticate: Basic Realm=" + responseBody.substring(1) + CRLF;
+            missingPassword = true;
+        }
+
         // Content-Type
         res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
 
         // Content-Length
-        res += "Content-Length: " + responseBody.getBytes().length + CRLF + CRLF;
+        res += "Content-Length: " + (missingPassword ? 0 : responseBody.getBytes().length) + CRLF + CRLF;
 
-        res += responseBody;
-        System.out.println(res);
+        res += (missingPassword ? "" : responseBody);
         return res;
     }
 
