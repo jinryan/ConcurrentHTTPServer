@@ -67,7 +67,7 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     public void parseRequest() {
-        System.out.println("Requ /est is\n========\n" + this.request + "========\n");
+        System.out.println("Request is\n========\n" + this.request + "========\n");
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
         requestMap.put("Method", requestLine[0]);
@@ -120,15 +120,24 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private String processPOST() throws IOException, ResponseException {
-        int port = 8080;
+        int port = socketChannel.socket().getLocalPort();
+//        System.out.println("POST from " + socketChannel.socket().getLocalPort());
         lastModifiedDate = getCurrentDate();
 
         String documentRoot = getDocumentRoot(port);
 
         String cgiPath = requestMap.get("Path");
         String uri = getURI(cgiPath, documentRoot);
+
+        String encodedURI = uri.replace(" ", "%20");
+        File f = new File("file://" + encodedURI);
+        if (!f.exists() || f.isDirectory()) {
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+        }
+
         String queryString = requestMap.get("Body");
-        return runCGIProgram(cgiPath, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
+        System.out.println("Fetching file from " + uri);
+        return runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
     }
 
     private String processRequest() throws ResponseException{
@@ -319,7 +328,6 @@ public class HTTPRequestHandler implements RequestHandler {
         while ((bytesRead = inputStream.read(buffer)) != -1) {
             output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
         }
-
         return output.toString();
     }
 
