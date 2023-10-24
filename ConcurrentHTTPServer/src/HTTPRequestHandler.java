@@ -95,7 +95,8 @@ public class HTTPRequestHandler implements RequestHandler {
         if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
             throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
-        if (!(requestMap.get("Method").equals("GET")) || requestMap.get("Method").equals("POST")) {
+        if (!((requestMap.get("Method").equals("GET")) || requestMap.get("Method").equals("POST"))) {
+
             throw new ResponseException("Invalid method " + requestMap.get("Method"), 405);
         }
     }
@@ -153,8 +154,8 @@ public class HTTPRequestHandler implements RequestHandler {
         String cgiPath = requestMap.get("Path");
         String uri = getURI(cgiPath, documentRoot);
 
-        String encodedURI = uri.replace(" ", "%20");
-        File f = new File("file://" + encodedURI);
+//        String encodedURI = uri.replace(" ", "%20");
+        File f = new File(uri);
         if (!f.exists() || f.isDirectory()) {
             throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
         }

@@ -117,7 +117,7 @@ public class HTTPServerWorkerThread implements Runnable {
         }
     }
     public void run() {
-        System.out.println("Worker #" + workerID + " listening");
+//        System.out.println("Worker #" + workerID + " listening");
         while (serverIsRunning()) {
             try {
                 selector.select(); // Blocking operation, returns only after a channel is selected
@@ -146,7 +146,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
 
                         numActiveConnections++;
-                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
+//                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 
                         // Register selector
