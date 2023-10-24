@@ -29,7 +29,6 @@ public class HTTPRequestHandler implements RequestHandler {
     public String filePath;
     public String lastModifiedDate;
     public String fileType;
-    private HTTPRequestType requestType;
 
     private SocketChannel socketChannel;
 
@@ -96,6 +95,9 @@ public class HTTPRequestHandler implements RequestHandler {
         if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
             throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
+        if (!(requestMap.get("Method").equals("GET")) || requestMap.get("Method").equals("POST")) {
+            throw new ResponseException("Invalid method " + requestMap.get("Method"), 405);
+        }
     }
 
     private String getLastModifiedDate(File responseFile) {
@@ -112,18 +114,7 @@ public class HTTPRequestHandler implements RequestHandler {
         return currentDateTime.format(formatter);
     }
     
-    private String processGET() throws ResponseException, IOException {
-        String response;
-        File responseFile = handleFileFromPath(requestMap.get("Path"));
-        lastModifiedDate = getLastModifiedDate(responseFile);
-        if (requestMap.get("If-Modified-Since") != null) {
-            if (compareDates()) {
-                throw new ResponseException("File is cached", 304);
-            }
-        }
-        response = getFileOutput(responseFile);
-        return response;
-    }
+
 
     private boolean compareDates() {
         System.out.println("yep");
@@ -136,6 +127,19 @@ public class HTTPRequestHandler implements RequestHandler {
             e.printStackTrace();
             return false;
         }
+    }
+
+    private String processGET() throws ResponseException, IOException {
+        String response;
+        File responseFile = getPath(requestMap.get("Path"));
+        lastModifiedDate = getLastModifiedDate(responseFile);
+        if (requestMap.get("If-Modified-Since") != null) {
+            if (compareDates()) {
+                throw new ResponseException("File is cached", 304);
+            }
+        }
+        response = getFileOutput(responseFile);
+        return response;
     }
 
     private String processPOST() throws IOException, ResponseException {
@@ -190,7 +194,7 @@ public class HTTPRequestHandler implements RequestHandler {
         return content.toString();
     }
 
-    private File handleFileFromPath(String path) throws ResponseException, IOException {
+    private File getPath(String path) throws ResponseException {
         int port = 8080;
 
         String documentRoot = getDocumentRoot(port);
@@ -199,14 +203,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
         if (!res.exists()){
             throw new ResponseException(path + " could not be found", 404);
-        }
-
-        if (requestMap.get("Method").equals("GET")) {
-            checkType(uri);
-        } else if (requestMap.get("Method").equals("POST")) {
-            System.out.println("POST REQUEST OH NO!");
-        } else {
-            throw new ResponseException("Invalid method " + requestMap.get("Method"), 405);
         }
 
         return res;
@@ -251,7 +247,7 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
 
-    private String getURI(String path, String documentRoot) throws ResponseException{
+    private String getURI(String path, String documentRoot) throws ResponseException {
         String res;
 
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
@@ -290,6 +286,8 @@ public class HTTPRequestHandler implements RequestHandler {
         //System.out.println(request);
         try {
             validateRequest();
+            getPath(requestMap.get("Path"));
+            authorizeRequest();
             String responseBody = processRequest();
             assert responseBody != null;
             return generateHeaders(200, responseBody);
@@ -297,6 +295,58 @@ public class HTTPRequestHandler implements RequestHandler {
             System.out.println("yay" + e.getStatusCode() + e.getMessage());
             return generateHeaders(e.getStatusCode(), e.getMessage());
         }
+    }
+
+    private void authorizeRequest() throws ResponseException{
+        // check if htaccess exists
+        String htaccessPath = filePath.substring(0, filePath.lastIndexOf("/") + 1) + ".htaccess";
+        File htaccessFile = new File(htaccessPath);
+
+        if (htaccessFile.exists()) {
+            Map<String, String> htaccessMap = parseHtaccess(htaccessFile);
+
+            // check if auth header exists and is valid
+            if (!(requestMap.get("Authorization") != null && requestMap.get("Authorization").startsWith("Basic "))) {
+                throw new ResponseException(htaccessMap.get("AuthName"), 401);
+            } else {
+                // decode auth header
+                String encodedAuth = requestMap.get("Authorization").substring(requestMap.get("Authorization").indexOf(" ") + 1);
+                byte[] decodedBytes = Base64.getDecoder().decode(encodedAuth);
+                String decodedString = new String(decodedBytes);
+                String[] credentials = decodedString.split(":");
+                String username = credentials[0];
+                String password = credentials[1];
+
+                System.out.println(username);
+                System.out.println(password);
+
+                // check that username and password match
+                if (!username.equals(htaccessMap.get("User")) || !password.equals(htaccessMap.get("Password"))) {
+                    throw new ResponseException(htaccessMap.get("AuthName"), 401);
+                }
+            }
+        }
+    }
+
+    private Map<String, String> parseHtaccess(File htaccessFile) {
+        HashMap<String, String> res = new HashMap<>();
+
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(htaccessFile));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\\s+", 2);
+                if (parts.length == 2) {
+                    String key = parts[0];
+                    String value = parts[1];
+                    res.put(key, value.replaceAll("^\"|\"$", ""));
+                }
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return res;
     }
 
     private String generateHeaders(int statusCode, String responseBody) {
