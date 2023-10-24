@@ -41,7 +41,8 @@ public class HTTPServerWorkerThread implements Runnable {
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
         String response = requestHandler.getResponse();
-        System.out.println(response);
+
+
 
         // Generate Response
         for (int i = 0; i < response.length(); i++) {

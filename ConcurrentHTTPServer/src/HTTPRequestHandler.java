@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.time.ZonedDateTime;
@@ -115,8 +116,26 @@ public class HTTPRequestHandler implements RequestHandler {
         String response;
         File responseFile = handleFileFromPath(requestMap.get("Path"));
         lastModifiedDate = getLastModifiedDate(responseFile);
+        if (requestMap.get("If-Modified-Since") != null) {
+            if (compareDates()) {
+                throw new ResponseException("File is cached", 304);
+            }
+        }
         response = getFileOutput(responseFile);
         return response;
+    }
+
+    private boolean compareDates() {
+        System.out.println("yep");
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+            Date fileDate = sdf.parse(lastModifiedDate);
+            Date requestDate = sdf.parse(requestMap.get("If-Modified-Since"));
+            return fileDate.compareTo(requestDate) < 0;
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     private String processPOST() throws IOException, ResponseException {
@@ -151,8 +170,7 @@ public class HTTPRequestHandler implements RequestHandler {
             } else {
                 throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
             }
-            String responseHeaders = generateHeaders(200, responseBody);
-            return responseHeaders + responseBody;
+            return generateHeaders(200, responseBody);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -205,7 +223,6 @@ public class HTTPRequestHandler implements RequestHandler {
             throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
         }
 
-        System.out.println(documentRoot);
         return documentRoot;
     }
 
@@ -305,7 +322,7 @@ public class HTTPRequestHandler implements RequestHandler {
         res += "Content-Length: " + responseBody.getBytes().length + CRLF + CRLF;
 
         res += responseBody;
-
+        System.out.println(res);
         return res;
     }
 
