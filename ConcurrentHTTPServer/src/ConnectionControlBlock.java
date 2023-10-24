@@ -59,12 +59,9 @@ public class ConnectionControlBlock {
         return request;
     }
 
-    public void setKeepConnectionAlive(boolean keepConnectionAlive) {
-        this.keepConnectionAlive = keepConnectionAlive;
-    }
 
     public boolean isKeepConnectionAlive() {
-        return keepConnectionAlive;
+        return this.requestHandler.keepAlive();
     }
 
     public void updateConnectionState() {
@@ -77,5 +74,12 @@ public class ConnectionControlBlock {
 
     public void setRequestHandler(RequestHandler requestHandler) {
         this.requestHandler = requestHandler;
+    }
+
+    public void resetState() {
+        this.readBuffer.clear();
+        this.writeBuffer.clear();
+        this.request = new StringBuffer(defaultBufferSize);
+        this.keepConnectionAlive = false;
     }
 }
