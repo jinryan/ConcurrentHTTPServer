@@ -6,7 +6,7 @@ public class Main {
 
         ServerConfigObject serverConfig = null;
         String configPath;
-        //
+
         if (args.length == 2 && args[0].equals("-config")) {
             configPath = args[1];
         } else {
