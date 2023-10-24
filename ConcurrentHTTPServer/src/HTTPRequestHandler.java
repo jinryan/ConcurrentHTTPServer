@@ -196,9 +196,22 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private File getPath(String path) throws ResponseException {
-        int port = 8080;
+        ArrayList<Integer> ports = serverConfig.getPorts();
 
-        String documentRoot = getDocumentRoot(port);
+        String documentRoot = null;
+
+        for (int port : ports) {
+            System.out.println(port);
+            documentRoot = getDocumentRoot(port);
+            if (documentRoot != null) {
+                break;
+            }
+        }
+
+        if (documentRoot == null) {
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+        }
+
         String uri = getURI(path, documentRoot);
         File res = new File(uri);
 
@@ -214,10 +227,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
         if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost")){
             documentRoot = serverConfig.getFirstRoot(port);
-        }
-
-        if (documentRoot == null){
-            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
         }
 
         return documentRoot;
