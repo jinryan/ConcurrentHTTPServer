@@ -123,12 +123,7 @@ public class HTTPRequestHandler implements RequestHandler {
         int port = 8080;
         lastModifiedDate = getCurrentDate();
 
-        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
-        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost"))
-            documentRoot = serverConfig.getFirstRoot(port);
-
-        if (documentRoot == null)
-            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+        String documentRoot = getDocumentRoot(port);
 
         String cgiPath = requestMap.get("Path");
         String uri = getURI(cgiPath, documentRoot);
@@ -171,13 +166,7 @@ public class HTTPRequestHandler implements RequestHandler {
     private File handleFileFromPath(String path) throws ResponseException, IOException {
         int port = 8080;
 
-        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
-        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost"))
-            documentRoot = serverConfig.getFirstRoot(port);
-
-        if (documentRoot == null)
-            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
-
+        String documentRoot = getDocumentRoot(port);
         String uri = getURI(path, documentRoot);
         File res = new File(uri);
 
@@ -194,6 +183,21 @@ public class HTTPRequestHandler implements RequestHandler {
         }
 
         return res;
+    }
+
+    private String getDocumentRoot(int port) throws ResponseException {
+        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
+
+        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost")){
+            documentRoot = serverConfig.getFirstRoot(port);
+        }
+
+        if (documentRoot == null){
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+        }
+
+        System.out.println(documentRoot);
+        return documentRoot;
     }
 
     private void checkType(String uri) throws ResponseException, IOException {
@@ -223,12 +227,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
     private String getURI(String path, String documentRoot) throws ResponseException{
         String res;
-
-        // Redirecting empty to index.html
-        if (path.equals("/")) {
-            path = "/index.html";
-        }
-
 
         if ((documentRoot + path).contains("../") || (documentRoot + path).endsWith("/..") || (documentRoot + path).equals(".."))
             throw new ResponseException(path + " is not a valid path", 404);
@@ -266,8 +264,11 @@ public class HTTPRequestHandler implements RequestHandler {
         //System.out.println(request);
         try {
             validateRequest();
-            return processRequest();
+            String responseBody = processRequest();
+            assert responseBody != null;
+            return generateHeaders(200, responseBody);
         } catch (ResponseException e) {
+            System.out.println("yay" + e.getStatusCode() + e.getMessage());
             return generateHeaders(e.getStatusCode(), e.getMessage());
         }
     }
@@ -293,6 +294,8 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // Content-Length
         res += "Content-Length: " + responseBody.getBytes().length + CRLF + CRLF;
+
+        res += responseBody;
 
         return res;
     }
