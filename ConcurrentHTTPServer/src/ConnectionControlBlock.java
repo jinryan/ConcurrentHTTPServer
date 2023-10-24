@@ -9,6 +9,16 @@ public class ConnectionControlBlock {
     private ByteBuffer writeBuffer;
     private StringBuffer request;
     private ConnectionState connectionState;
+
+    public long getLastReadTime() {
+        return lastReadTime;
+    }
+
+    public void setLastReadTime(long lastReadTime) {
+        this.lastReadTime = lastReadTime;
+    }
+
+    private long lastReadTime;
     private boolean keepConnectionAlive;
 
     private RequestHandler requestHandler = null;
@@ -18,6 +28,7 @@ public class ConnectionControlBlock {
         this.connectionState = ConnectionState.ACCEPT;
         this.request = new StringBuffer(defaultBufferSize);
         this.keepConnectionAlive = false;
+        this.lastReadTime = System.currentTimeMillis();
     }
 
     public ConnectionControlBlock(int bufferSize) {
@@ -25,6 +36,8 @@ public class ConnectionControlBlock {
         this.writeBuffer = ByteBuffer.allocate(bufferSize);
         this.connectionState = ConnectionState.ACCEPT;
     }
+
+
 
     public ByteBuffer getReadBuffer() {
         return readBuffer;

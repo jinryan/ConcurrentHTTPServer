@@ -7,6 +7,11 @@ import java.net.ServerSocket;
 import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.Thread.sleep;
 
@@ -17,19 +22,21 @@ public class HTTPServer {
     private static int idealAveragePerWorker;
     private static int numTotalConnections;
     private ArrayList<ServerSocketChannel> serverChannels;
+    private ArrayList<Selector> selectors;
     private Thread workers[];
     Scanner inputReader;
     WorkersSyncData syncData;
     ServerConfigObject serverConfig;
     public HTTPServer(int numWorkers, int idealAveragePerWorker, ServerConfigObject serverConfig) {
-        HTTPServer.numWorkers = numWorkers;
-        HTTPServer.idealAveragePerWorker = serverConfig.getnSelectLoop();
+        HTTPServer.numWorkers = serverConfig.getnSelectLoop();
+        HTTPServer.idealAveragePerWorker = 8;
         HTTPServer.numTotalConnections = numWorkers * idealAveragePerWorker;
         this.ports = serverConfig.getPorts();
         this.workers = new Thread[numWorkers];
         this.inputReader = new Scanner(System.in);
         this.serverConfig = serverConfig;
         this.serverChannels = new ArrayList<ServerSocketChannel>();
+        this.selectors = new ArrayList<>();
         syncData = new WorkersSyncData(numWorkers, numTotalConnections);
     }
 
@@ -58,6 +65,7 @@ public class HTTPServer {
         for (int i = 0; i < numWorkers; i++) {
             HTTPServerWorkerThread worker = new HTTPServerWorkerThread(syncData, i, serverConfig);
             Selector workerSelector = worker.getSelector();
+            this.selectors.add(workerSelector);
             try {
                 for (ServerSocketChannel serverChannel : this.serverChannels) {
                     serverChannel.register(workerSelector, SelectionKey.OP_ACCEPT);
@@ -85,19 +93,24 @@ public class HTTPServer {
     private void monitorKeyboardInput() {
         boolean quitServer = false;
         while (!quitServer) {
-            String myinput = inputReader.nextLine();
-            System.out.println("You entered " + myinput);
-            if (myinput.equals("quit") || myinput.equals("stop")) {
-                System.out.println("Quit server");
+            String userInput = inputReader.nextLine();
+            if (userInput.equalsIgnoreCase("quit") || userInput.equalsIgnoreCase("stop")) {
                 quitServer = true;
             }
         }
         quitServer();
     }
 
+    private void startMonitoringTimeout() {
+        TimerTask timeoutMonitor = new ChannelTimeOutMonitor(this.selectors);
+        Timer timer = new Timer();
+        timer.schedule(timeoutMonitor, 0, 500);
+    }
+
     public void start() {
         openServerChannel();
         startWorkerThreads();
+        startMonitoringTimeout();
         monitorKeyboardInput();
 
     }

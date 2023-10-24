@@ -12,8 +12,7 @@ import java.util.Map;
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
     public static void main(String[] args) {
-        String s = "/";
-        System.out.println(s.equals("/"));
+        System.out.println(System.currentTimeMillis());
 //        try {
 ////            new URI(res);
 //            String path = "/Users/ryanjin/Desktop/Yale/Fall 23/CPSC 434 Topics in Networked Systems/ConcurrentHTTPServer/ConcurrentHTTPServer/../www/index.html";
