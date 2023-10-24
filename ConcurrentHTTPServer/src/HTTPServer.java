@@ -43,7 +43,7 @@ public class HTTPServer {
     private void openServerChannel() {
         try {
             for (int port : this.ports) {
-                System.out.println("Atempting to port " + port);
+                System.out.println("Server running on port " + port);
                 ServerSocketChannel serverChannel = ServerSocketChannel.open(); // Creates an unbounded socket
                 ServerSocket serversocket = serverChannel.socket();
                 InetSocketAddress address = new InetSocketAddress(port);

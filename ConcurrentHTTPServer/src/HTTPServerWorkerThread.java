@@ -42,6 +42,8 @@ public class HTTPServerWorkerThread implements Runnable {
         requestHandler.parseRequest();
         String response = requestHandler.getResponse();
 
+
+
         // Generate Response
         for (int i = 0; i < response.length(); i++) {
             char ch = response.charAt(i);

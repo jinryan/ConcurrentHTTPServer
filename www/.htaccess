@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Restricted Files"
+User addison
+Password ryan_sucks
