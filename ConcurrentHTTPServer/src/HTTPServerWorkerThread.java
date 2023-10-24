@@ -56,7 +56,9 @@ public class HTTPServerWorkerThread implements Runnable {
         ccb.setConnectionState(ConnectionState.WRITE);
 
         // Keep Connection Alive
-        // ccb.setKeepConnectionAlive(true);
+        if (requestHandler.keepAlive()) {
+            ccb.setKeepConnectionAlive(true);
+        }
     }
 
     private void closeSocket(SocketChannel socketChannel) {
@@ -137,7 +139,6 @@ public class HTTPServerWorkerThread implements Runnable {
                         if (overloaded()) {
                             continue;
                         }
-
                         // Get channel
                         ServerSocketChannel server = (ServerSocketChannel) key.channel();
                         SocketChannel client = server.accept();

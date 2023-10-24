@@ -93,8 +93,10 @@ public class HTTPServer {
     private void monitorKeyboardInput() {
         boolean quitServer = false;
         while (!quitServer) {
-            String userInput = inputReader.nextLine();
-            if (userInput.equalsIgnoreCase("quit") || userInput.equalsIgnoreCase("stop")) {
+            String myinput = inputReader.nextLine();
+            System.out.println("You entered " + myinput);
+            if (myinput.equalsIgnoreCase("shutdown") || myinput.equalsIgnoreCase("stop") || myinput.equalsIgnoreCase("quit")) {
+                System.out.println("Server is shutting down");
                 quitServer = true;
             }
         }
