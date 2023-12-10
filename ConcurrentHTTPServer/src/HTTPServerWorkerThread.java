@@ -12,7 +12,6 @@ import java.util.Set;
 public class HTTPServerWorkerThread implements Runnable {
 
     private Selector selector;
-    private int workerID;
 
     final WorkersSyncData syncData;
     private int numActiveConnections = 0;
@@ -21,7 +20,6 @@ public class HTTPServerWorkerThread implements Runnable {
 
     public HTTPServerWorkerThread(WorkersSyncData syncdata, int workerID, ServerConfigObject serverConfig) {
         this.serverConfig = serverConfig;
-        this.workerID = workerID;
         this.syncData = syncdata;
         try {
             selector = Selector.open();
@@ -40,7 +38,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
-        String response = requestHandler.getResponse();
+        String response = requestHandler.handleRequest();
 
 
 

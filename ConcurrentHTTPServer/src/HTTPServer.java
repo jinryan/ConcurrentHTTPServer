@@ -1,7 +1,6 @@
 import ConfigParser.ServerConfigObject;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.*;
@@ -9,21 +8,16 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.Thread.sleep;
 
 public class HTTPServer {
 
-    private ArrayList<Integer> ports;
+    private final ArrayList<Integer> ports;
     private static int numWorkers;
     private static int idealAveragePerWorker;
     private static int numTotalConnections;
-    private ArrayList<ServerSocketChannel> serverChannels;
-    private ArrayList<Selector> selectors;
-    private Thread workers[];
+    private final ArrayList<ServerSocketChannel> serverChannels;
+    private final ArrayList<Selector> selectors;
+    private final Thread[] workers;
     Scanner inputReader;
     WorkersSyncData syncData;
     ServerConfigObject serverConfig;
@@ -58,9 +52,6 @@ public class HTTPServer {
         }
     }
 
-
-
-
     private void startWorkerThreads() {
         for (int i = 0; i < numWorkers; i++) {
             HTTPServerWorkerThread worker = new HTTPServerWorkerThread(syncData, i, serverConfig);
@@ -79,6 +70,13 @@ public class HTTPServer {
         }
     }
 
+    // Every 0.5 seconds, check all threads to see if any have been stuck for more than 3 seconds, and close the channel if so
+    private void startMonitoringTimeout() {
+        TimerTask timeoutMonitor = new ChannelTimeOutMonitor(this.selectors);
+        Timer timer = new Timer();
+        timer.schedule(timeoutMonitor, 0, 500);
+    }
+
     private void quitServer() {
         syncData.setServerRun(false);
         for (int i = 0; i < numWorkers; i++) {
@@ -91,22 +89,15 @@ public class HTTPServer {
     }
 
     private void monitorKeyboardInput() {
-        boolean quitServer = false;
-        while (!quitServer) {
-            String myinput = inputReader.nextLine();
-            System.out.println("You entered " + myinput);
-            if (myinput.equalsIgnoreCase("shutdown") || myinput.equalsIgnoreCase("stop") || myinput.equalsIgnoreCase("quit")) {
+        while (true) {
+            String input = inputReader.nextLine();
+            System.out.println("You entered " + input);
+            if (input.equalsIgnoreCase("shutdown") || input.equalsIgnoreCase("stop") || input.equalsIgnoreCase("quit")) {
                 System.out.println("Server is shutting down");
-                quitServer = true;
+                break;
             }
         }
         quitServer();
-    }
-
-    private void startMonitoringTimeout() {
-        TimerTask timeoutMonitor = new ChannelTimeOutMonitor(this.selectors);
-        Timer timer = new Timer();
-        timer.schedule(timeoutMonitor, 0, 500);
     }
 
     public void start() {
@@ -114,6 +105,5 @@ public class HTTPServer {
         startWorkerThreads();
         startMonitoringTimeout();
         monitorKeyboardInput();
-
     }
 }

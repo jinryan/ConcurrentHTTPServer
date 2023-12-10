@@ -26,9 +26,9 @@ public class HTTPRequestHandler implements RequestHandler {
     public String lastModifiedDate;
     public String fileType;
 
-    private SocketChannel socketChannel;
+    private final SocketChannel socketChannel;
 
-    private char[] lastFour = {0, 0, 0, 0};
+    private final char[] lastFour = {0, 0, 0, 0};
     private int i;
     private int expectedContentFromBody;
     private boolean readingBody = false;
@@ -46,13 +46,6 @@ public class HTTPRequestHandler implements RequestHandler {
         statusCodeMessages.put(406, "Not Acceptable");
         statusCodeMessages.put(408, "Request Timeout");
         statusCodeMessages.put(500, "Internal Server Error");
-
-    }
-
-    public HTTPRequestHandler(StringBuffer request, ServerConfigObject serverConfig) {
-        this.request = request.toString();
-        this.serverConfig = serverConfig;
-        this.requestMap = new HashMap<>();
     }
 
     public HTTPRequestHandler(ServerConfigObject serverConfig, SocketChannel socketChannel) {
@@ -62,12 +55,8 @@ public class HTTPRequestHandler implements RequestHandler {
         this.socketChannel = socketChannel;
     }
 
-    public boolean keepAlive() {
-        return requestMap.get("Connection") != null && requestMap.get("Connection").equals("keep-alive");
-    }
-
+    // given a request, parse the headers into a hashmap (requestMap), and the body into the "Body" field of the hashmap
     public void parseRequest() {
-//        System.out.println("Request is\n========\n" + this.request + "========\n");
         String[] lines = this.request.split("\\r\\n");
         String[] requestLine = lines[0].split(" ");
         requestMap.put("Method", requestLine[0]);
@@ -91,109 +80,62 @@ public class HTTPRequestHandler implements RequestHandler {
         }
     }
 
+    // handle a request after having parsed it
+    public String handleRequest() {
+        try {
+            validateRequest();
+            getPath(requestMap.get("Path"));
+            authorizeRequest();
+            String responseBody = processRequest();
+            assert responseBody != null;
+            return generateFullResponse(200, responseBody, false);
+        } catch (ResponseException e) {
+            return generateFullResponse(e.getStatusCode(), e.getStatusCode() + ' ' + e.getMessage(), e.getHasEmptyAuthentication());
+        }
+    }
+
+    public void readCharsToRequest(char c) {
+        this.request += c;
+        this.lastFour[i % 4] = c;
+        i++;
+        if (readingBody) {
+            expectedContentFromBody--;
+        }
+    }
+
+    public boolean requestCompleted() {
+        if (readingBody && expectedContentFromBody == 0) {
+            return true;
+        } else if (!readingBody
+                && i > 3
+                && lastFour[(i-1) % 4] == '\n'
+                && lastFour[(i-2) % 4] == '\r'
+                && lastFour[(i-3) % 4] == '\n'
+                && lastFour[(i-4) % 4] == '\r') {
+            parseRequest();
+            if (requestMap.containsKey("Content-length")) {
+                expectedContentFromBody = Integer.parseInt(requestMap.get("Content-length"));
+                readingBody = true;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean keepAlive() {
+        return requestMap.get("Connection") != null && requestMap.get("Connection").equals("keep-alive");
+    }
+
+
+    // Make sure request is formatted legitimately
     private void validateRequest() throws ResponseException {
         if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
             throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
         if (!((requestMap.get("Method").equals("GET")) || requestMap.get("Method").equals("POST"))) {
-
             throw new ResponseException("Invalid method " + requestMap.get("Method"), 405);
         }
-    }
-
-    private String getLastModifiedDate(File responseFile) {
-        long lastModifiedTimestamp = responseFile.lastModified();
-        Date lastModifiedDateDate = new Date(lastModifiedTimestamp);
-        SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-        return sdf.format(lastModifiedDateDate);
-    }
-
-    private String getCurrentDate() {
-        ZonedDateTime currentDateTime = ZonedDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
-        return currentDateTime.format(formatter);
-    }
-    
-
-
-    private boolean compareDates() {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-            Date fileDate = sdf.parse(lastModifiedDate);
-            Date requestDate = sdf.parse(requestMap.get("If-Modified-Since"));
-            return fileDate.compareTo(requestDate) < 0;
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    private String processGET() throws ResponseException, IOException {
-        String response;
-        File responseFile = getPath(requestMap.get("Path"));
-        checkType(filePath);
-
-        lastModifiedDate = getLastModifiedDate(responseFile);
-        if (requestMap.get("If-Modified-Since") != null) {
-            if (compareDates()) {
-                throw new ResponseException("File is cached", 304);
-            }
-        }
-        response = getFileOutput(responseFile);
-        return response;
-    }
-
-    private String processPOST() throws IOException, ResponseException {
-        int port = socketChannel.socket().getLocalPort();
-//        System.out.println("POST from " + socketChannel.socket().getLocalPort());
-        lastModifiedDate = getCurrentDate();
-
-        String documentRoot = getDocumentRoot(port);
-
-        String cgiPath = requestMap.get("Path");
-        String uri = getURI(cgiPath, documentRoot);
-
-//        String encodedURI = uri.replace(" ", "%20");
-        File f = new File(uri);
-        if (!f.exists() || f.isDirectory()) {
-            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
-        }
-
-        String queryString = requestMap.get("Body");
-        System.out.println("Fetching file from " + uri);
-        return runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
-    }
-
-    private String processRequest() throws ResponseException{
-        String responseBody;
-
-        try {
-            if (requestMap.get("Method").equals("GET")) {
-                responseBody = processGET();
-            } else if (requestMap.get("Method").equals("POST")) {
-                responseBody =  processPOST();
-            } else {
-                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
-            }
-            return generateHeaders(200, responseBody);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private String getFileOutput(File responseFile) throws IOException{
-        StringBuilder content = new StringBuilder();
-        BufferedReader reader = new BufferedReader(new FileReader(responseFile));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            content.append(line);
-            content.append(System.lineSeparator());
-        }
-        reader.close();
-        return content.toString();
     }
 
     private File getPath(String path) throws ResponseException {
@@ -221,42 +163,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
         return res;
     }
-
-    private String getDocumentRoot(int port) throws ResponseException {
-        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
-
-        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost")){
-            documentRoot = serverConfig.getFirstRoot(port);
-        }
-
-        return documentRoot;
-    }
-
-    private void checkType(String uri) throws ResponseException, IOException {
-        String mimeType = Files.probeContentType(Paths.get(uri));
-        fileType = mimeType;
-
-        if (mimeType == null)
-            throw new ResponseException("Invalid file type: requested file is a folder", 406);
-
-        if (requestMap.get("Accept") != null) {
-            String[] types = requestMap.get("Accept").split(",\\s*");
-
-            String mimeStart = mimeType.substring(0, mimeType.indexOf("/"));
-            String mimeEnd = mimeType.substring(mimeType.indexOf("/") + 1);
-
-            for (String type : types) {
-                String typeStart = type.substring(0, type.indexOf("/"));
-                String typeEnd  = type.substring(type.indexOf("/") + 1);
-                if ((typeStart.equals(mimeStart) || typeStart.equals("*")) && (typeEnd.equals(mimeEnd) || typeEnd.equals("*"))) {
-                    return;
-                }
-            }
-
-            throw new ResponseException("Invalid file type " + mimeType, 406);
-        }
-    }
-
 
     private String getURI(String path, String documentRoot) throws ResponseException {
         String res;
@@ -293,18 +199,14 @@ public class HTTPRequestHandler implements RequestHandler {
         return res;
     }
 
-    public String getResponse() {
-        //System.out.println(request);
-        try {
-            validateRequest();
-            getPath(requestMap.get("Path"));
-            authorizeRequest();
-            String responseBody = processRequest();
-            assert responseBody != null;
-            return generateHeaders(200, responseBody);
-        } catch (ResponseException e) {
-            return generateHeaders(e.getStatusCode(), e.getMessage());
+    private String getDocumentRoot(int port) throws ResponseException {
+        String documentRoot = serverConfig.getRootFrom(requestMap.get("Host"), port);
+
+        if (requestMap.get("Host") == null || requestMap.get("Host").startsWith("localhost")){
+            documentRoot = serverConfig.getFirstRoot(port);
         }
+
+        return documentRoot;
     }
 
     private void authorizeRequest() throws ResponseException{
@@ -317,22 +219,29 @@ public class HTTPRequestHandler implements RequestHandler {
 
             // check if auth header exists and is valid
             if (!(requestMap.get("Authorization") != null && requestMap.get("Authorization").startsWith("Basic "))) {
-                throw new ResponseException("~" + htaccessMap.get("AuthName"), 401);
+                throw new ResponseException("401 Unauthorized: " + htaccessMap.get("AuthName"), 401, true);
             } else {
                 // decode auth header
                 String encodedAuth = requestMap.get("Authorization").substring(requestMap.get("Authorization").indexOf(" ") + 1);
-                byte[] decodedBytes = Base64.getDecoder().decode(encodedAuth);
-                String decodedString = new String(decodedBytes);
-                String[] credentials = decodedString.split(":");
-                if (credentials.length != 2)
-                    throw new ResponseException(htaccessMap.get("AuthName"), 401);
+                try {
+                    byte[] decodedBytes = Base64.getDecoder().decode(encodedAuth);
 
-                String username = credentials[0];
-                String password = credentials[1];
+                    String decodedString = new String(decodedBytes);
+                    String[] credentials = decodedString.split(":");
 
-                // check that username and password match
-                if (!username.equals(htaccessMap.get("User")) || !password.equals(htaccessMap.get("Password"))) {
-                    throw new ResponseException(htaccessMap.get("AuthName"), 401);
+                    if (credentials.length != 2)
+                        throw new RuntimeException();
+
+                    String username = credentials[0];
+                    String password = credentials[1];
+
+                    // check that username and password match
+                    if (!username.equals(htaccessMap.get("User")) || !password.equals(htaccessMap.get("Password"))) {
+                        throw new RuntimeException();
+                    }
+
+                } catch (Exception e) {
+                    throw new ResponseException("401 Unauthorized: " + htaccessMap.get("AuthName"), 401);
                 }
             }
         }
@@ -359,40 +268,124 @@ public class HTTPRequestHandler implements RequestHandler {
         return res;
     }
 
-    private String generateHeaders(int statusCode, String responseBody) {
-        boolean missingPassword = false;
-        String CRLF = "\r\n";
-        String res = "";
+    private String processRequest() throws ResponseException{
+        String responseBody;
 
-        // First response line
-        res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
+        try {
+            if (requestMap.get("Method").equals("GET")) {
+                responseBody = processGET();
+            } else if (requestMap.get("Method").equals("POST")) {
+                responseBody =  processPOST();
+            } else {
+                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+            }
+            return generateFullResponse(200, responseBody, false);
 
-        // Date
-        res += "Date: " + getCurrentDate() + CRLF;
-
-        // Server
-        res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
-
-        // Last-Modified
-        res += "Last-Modified: " + lastModifiedDate + CRLF;
-
-        // Optional WWW-Authenticate
-        if ((statusCode == 401) && (responseBody.charAt(0) == '~')) {
-            res += "WWW-Authenticate: Basic Realm=" + responseBody.substring(1) + CRLF;
-            missingPassword = true;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        // Content-Type
-        res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
-
-        // Content-Length
-        res += "Content-Length: " + (missingPassword ? 0 : responseBody.getBytes().length) + CRLF + CRLF;
-
-        res += (missingPassword ? "" : responseBody);
-        return res;
+        return null;
     }
 
-    public String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
+    private String processGET() throws ResponseException, IOException {
+        String response;
+        File responseFile = getPath(requestMap.get("Path"));
+        checkType(filePath);
+
+        lastModifiedDate = getLastModifiedDate(responseFile);
+        if (requestMap.get("If-Modified-Since") != null) {
+            if (compareDates()) {
+                throw new ResponseException("File is cached", 304);
+            }
+        }
+        response = getFileOutput(responseFile);
+        return response;
+    }
+
+    private void checkType(String uri) throws ResponseException, IOException {
+        String mimeType = Files.probeContentType(Paths.get(uri));
+        fileType = mimeType;
+
+        if (mimeType == null)
+            throw new ResponseException("Invalid file type: requested file is a folder", 406);
+
+        if (requestMap.get("Accept") != null) {
+            String[] types = requestMap.get("Accept").split(",\\s*");
+
+            String mimeStart = mimeType.substring(0, mimeType.indexOf("/"));
+            String mimeEnd = mimeType.substring(mimeType.indexOf("/") + 1);
+
+            for (String type : types) {
+                String typeStart = type.substring(0, type.indexOf("/"));
+                String typeEnd  = type.substring(type.indexOf("/") + 1);
+                if ((typeStart.equals(mimeStart) || typeStart.equals("*")) && (typeEnd.equals(mimeEnd) || typeEnd.equals("*"))) {
+                    return;
+                }
+            }
+
+            throw new ResponseException("Invalid file type " + mimeType, 406);
+        }
+    }
+
+
+    private String getLastModifiedDate(File responseFile) {
+        long lastModifiedTimestamp = responseFile.lastModified();
+        Date lastModifiedDateDate = new Date(lastModifiedTimestamp);
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        return sdf.format(lastModifiedDateDate);
+    }
+
+    private String getCurrentDate() {
+        ZonedDateTime currentDateTime = ZonedDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss zzz");
+        return currentDateTime.format(formatter);
+    }
+
+    private boolean compareDates() {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
+            Date fileDate = sdf.parse(lastModifiedDate);
+            Date requestDate = sdf.parse(requestMap.get("If-Modified-Since"));
+            return fileDate.compareTo(requestDate) < 0;
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private String getFileOutput(File responseFile) throws IOException{
+        StringBuilder content = new StringBuilder();
+        BufferedReader reader = new BufferedReader(new FileReader(responseFile));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            content.append(line);
+            content.append(System.lineSeparator());
+        }
+        reader.close();
+        return content.toString();
+    }
+
+    private String processPOST() throws IOException, ResponseException {
+        int port = socketChannel.socket().getLocalPort();
+        lastModifiedDate = getCurrentDate();
+
+        String documentRoot = getDocumentRoot(port);
+
+        String cgiPath = requestMap.get("Path");
+        String uri = getURI(cgiPath, documentRoot);
+
+        File f = new File(uri);
+        if (!f.exists() || f.isDirectory()) {
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+        }
+
+        String queryString = requestMap.get("Body");
+        System.out.println("Fetching file from " + uri);
+        return runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
+    }
+
+    private String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
         String perlInterpreter = "perl";
         ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
         processBuilder.environment().put("QUERY_STRING", queryString);
@@ -414,34 +407,36 @@ public class HTTPRequestHandler implements RequestHandler {
         return output.toString();
     }
 
-    public void readCharsToRequest(char c) {
-        this.request += c;
-        this.lastFour[i % 4] = c;
-        i++;
-        if (readingBody) {
-            expectedContentFromBody--;
+    private String generateFullResponse(int statusCode, String responseBody, boolean hasEmptyAuthentication) {
+        boolean missingPassword = false;
+        String CRLF = "\r\n";
+        String res = "";
+
+        // First response line
+        res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
+
+        // Date
+        res += "Date: " + getCurrentDate() + CRLF;
+
+        // Server
+        res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
+
+        // Last-Modified
+        res += "Last-Modified: " + lastModifiedDate + CRLF;
+
+        // WWW-Authenticate
+        if (hasEmptyAuthentication) {
+            res += "WWW-Authenticate: Basic Realm=" + responseBody.substring(1) + CRLF;
         }
+
+        // Content-Type
+        res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
+
+        // Content-Length
+        res += "Content-Length: " + (responseBody.getBytes().length) + CRLF + CRLF;
+
+        res += responseBody;
+
+        return res;
     }
-
-    public boolean requestCompleted() {
-        if (readingBody && expectedContentFromBody == 0) {
-            return true;
-        } else if (!readingBody
-                && i > 3
-                && lastFour[(i-1) % 4] == '\n'
-                && lastFour[(i-2) % 4] == '\r'
-                && lastFour[(i-3) % 4] == '\n'
-                && lastFour[(i-4) % 4] == '\r') {
-            parseRequest();
-            if (requestMap.containsKey("Content-length")) {
-                expectedContentFromBody = Integer.parseInt(requestMap.get("Content-length"));
-                readingBody = true;
-            } else {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
 }

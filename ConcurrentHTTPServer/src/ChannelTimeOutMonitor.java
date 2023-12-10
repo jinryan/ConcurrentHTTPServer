@@ -1,13 +1,11 @@
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.TimerTask;
 
 public class ChannelTimeOutMonitor extends TimerTask {
-    private ArrayList<Selector> selectors;
+    private final ArrayList<Selector> selectors;
 
     public ChannelTimeOutMonitor(ArrayList<Selector> selectors) {
         this.selectors = selectors;
@@ -20,6 +18,7 @@ public class ChannelTimeOutMonitor extends TimerTask {
                 if (key.attachment() != null) {
                     ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                     long curr = System.currentTimeMillis();
+                    // if the last time this selector read something was more than 3 seconds ago, close the channel
                     if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 3.0) {
                         try {
                             key.channel().close();
@@ -33,8 +32,4 @@ public class ChannelTimeOutMonitor extends TimerTask {
             }
         }
     }
-
-
-
-
 }
