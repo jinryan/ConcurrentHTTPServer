@@ -90,7 +90,7 @@ public class HTTPRequestHandler implements RequestHandler {
             assert responseBody != null;
             return generateFullResponse(200, responseBody, false);
         } catch (ResponseException e) {
-            return generateFullResponse(e.getStatusCode(), e.getStatusCode() + ' ' + e.getMessage(), e.getHasEmptyAuthentication());
+            return generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
         }
     }
 
