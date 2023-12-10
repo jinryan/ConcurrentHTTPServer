@@ -1,5 +1,3 @@
-import com.sun.net.httpserver.Request;
-
 import java.nio.ByteBuffer;
 
 public class ConnectionControlBlock {
@@ -19,15 +17,13 @@ public class ConnectionControlBlock {
     }
 
     private long lastReadTime;
-    private boolean keepConnectionAlive;
-
     private RequestHandler requestHandler = null;
+    
     public ConnectionControlBlock() {
         this.readBuffer = ByteBuffer.allocate(defaultBufferSize);
         this.writeBuffer = ByteBuffer.allocate(defaultBufferSize);
         this.connectionState = ConnectionState.ACCEPT;
         this.request = new StringBuffer(defaultBufferSize);
-        this.keepConnectionAlive = false;
         this.lastReadTime = System.currentTimeMillis();
     }
 
@@ -80,6 +76,5 @@ public class ConnectionControlBlock {
         this.readBuffer.clear();
         this.writeBuffer.clear();
         this.request = new StringBuffer(defaultBufferSize);
-        this.keepConnectionAlive = false;
     }
 }

@@ -33,7 +33,7 @@ public class HTTPServerWorkerThread implements Runnable {
     }
 
     private void generateResponse(ConnectionControlBlock ccb) {
-        StringBuffer request = ccb.getRequest();
+        ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
 
         RequestHandler requestHandler = ccb.getRequestHandler();
@@ -168,8 +168,6 @@ public class HTTPServerWorkerThread implements Runnable {
                             continue;
                         }
 
-                        System.out.println(4);
-
                         // Get channel
                         SocketChannel client = (SocketChannel) key.channel();
 
@@ -191,17 +189,13 @@ public class HTTPServerWorkerThread implements Runnable {
                             continue;
                         }
 
-                        System.out.println(5);
-
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
                         updateCCBOnWrite(writeBytes, ccb);
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.WRITTEN) {
                             // Unless keep connection alive
-                            System.out.println(1);
                             if (ccb.isKeepConnectionAlive()) {
-                                System.out.println(2);
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());
                                 ccb.setConnectionState(ConnectionState.READING);

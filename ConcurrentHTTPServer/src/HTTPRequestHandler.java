@@ -219,7 +219,7 @@ public class HTTPRequestHandler implements RequestHandler {
 
             // check if auth header exists and is valid
             if (!(requestMap.get("Authorization") != null && requestMap.get("Authorization").startsWith("Basic "))) {
-                throw new ResponseException("401 Unauthorized: " + htaccessMap.get("AuthName"), 401, true);
+                throw new ResponseException("Unauthorized: " + htaccessMap.get("AuthName"), 401, true);
             } else {
                 // decode auth header
                 String encodedAuth = requestMap.get("Authorization").substring(requestMap.get("Authorization").indexOf(" ") + 1);
@@ -241,7 +241,7 @@ public class HTTPRequestHandler implements RequestHandler {
                     }
 
                 } catch (Exception e) {
-                    throw new ResponseException("401 Unauthorized: " + htaccessMap.get("AuthName"), 401);
+                    throw new ResponseException("Unauthorized: " + htaccessMap.get("AuthName"), 401);
                 }
             }
         }
@@ -408,7 +408,6 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private String generateFullResponse(int statusCode, String responseBody, boolean hasEmptyAuthentication) {
-        boolean missingPassword = false;
         String CRLF = "\r\n";
         String res = "";
 

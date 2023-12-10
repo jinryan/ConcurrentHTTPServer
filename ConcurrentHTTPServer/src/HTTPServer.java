@@ -13,7 +13,7 @@ public class HTTPServer {
 
     private final ArrayList<Integer> ports;
     private static int numWorkers;
-    private static int idealAveragePerWorker;
+    // private static int idealAveragePerWorker;
     private static int numTotalConnections;
     private final ArrayList<ServerSocketChannel> serverChannels;
     private final ArrayList<Selector> selectors;
@@ -23,7 +23,7 @@ public class HTTPServer {
     ServerConfigObject serverConfig;
     public HTTPServer(int numWorkers, int idealAveragePerWorker, ServerConfigObject serverConfig) {
         HTTPServer.numWorkers = serverConfig.getnSelectLoop();
-        HTTPServer.idealAveragePerWorker = 8;
+        // HTTPServer.idealAveragePerWorker = 8;
         HTTPServer.numTotalConnections = numWorkers * idealAveragePerWorker;
         this.ports = serverConfig.getPorts();
         this.workers = new Thread[numWorkers];
