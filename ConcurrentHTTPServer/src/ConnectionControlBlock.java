@@ -33,8 +33,6 @@ public class ConnectionControlBlock {
         this.connectionState = ConnectionState.ACCEPT;
     }
 
-
-
     public ByteBuffer getReadBuffer() {
         return readBuffer;
     }
@@ -54,7 +52,6 @@ public class ConnectionControlBlock {
     public StringBuffer getRequest() {
         return request;
     }
-
 
     public boolean isKeepConnectionAlive() {
         return this.requestHandler.keepAlive();
