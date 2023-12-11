@@ -165,6 +165,27 @@ public class HTTPRequestHandler implements RequestHandler {
         return runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
     }
 
+    private void processPOSTChunked(HTTPResponseHandler responseHandler) throws IOException, ResponseException {
+        int port = socketChannel.socket().getLocalPort();
+//        System.out.println("POST from " + socketChannel.socket().getLocalPort());
+        lastModifiedDate = getCurrentDate();
+
+        String documentRoot = getDocumentRoot(port);
+
+        String cgiPath = requestMap.get("Path");
+        String uri = getURI(cgiPath, documentRoot);
+
+//        String encodedURI = uri.replace(" ", "%20");
+        File f = new File(uri);
+        if (!f.exists() || f.isDirectory()) {
+            throw new ResponseException("Host " + requestMap.get("Host") + " could not be resolved", 404);
+        }
+
+        String queryString = requestMap.get("Body");
+        System.out.println("Fetching file from " + uri);
+        runCGIProgramChunked(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST", responseHandler);
+    }
+
     private String processRequest() throws ResponseException{
         String responseBody;
 
@@ -182,6 +203,21 @@ public class HTTPRequestHandler implements RequestHandler {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private void processChunkedRequest(HTTPResponseHandler responseHandler) throws ResponseException{
+        String responseBody;
+
+        try {
+            if (requestMap.get("Method").equals("POST")) {
+                processPOSTChunked(responseHandler);
+            } else {
+                throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private String getFileOutput(File responseFile) throws IOException{
@@ -307,6 +343,29 @@ public class HTTPRequestHandler implements RequestHandler {
         }
     }
 
+    public void getResponseContent(HTTPResponseHandler responseHandler) {
+        try {
+            validateRequest();
+            getPath(requestMap.get("Path"));
+            authorizeRequest();
+            if (requestMap.containsKey("Transfer-Encoding") && ((String)requestMap.get("Transfer-Encoding")).equals("chunked")) {
+                processChunkedRequest(responseHandler);
+            } else {
+                String responseBody = processRequest();
+                assert responseBody != null;
+                String httpResponse = generateHeaders(200, responseBody);
+                byte[] responseBytes = httpResponse.getBytes();
+                responseHandler.apply(responseBytes, responseBytes.length, "", false);
+                responseHandler.apply(responseBytes, 0, "", true);
+            }
+        } catch (ResponseException e) {
+            String httpResponse = generateHeaders(e.getStatusCode(), e.getMessage());
+            byte[] responseBytes = httpResponse.getBytes();
+            responseHandler.apply(responseBytes, responseBytes.length, "", false);
+            responseHandler.apply(responseBytes, 0, "", true);
+        }
+    }
+
     private void authorizeRequest() throws ResponseException{
         // check if htaccess exists
         String htaccessPath = filePath.substring(0, filePath.lastIndexOf("/") + 1) + ".htaccess";
@@ -392,6 +451,31 @@ public class HTTPRequestHandler implements RequestHandler {
         return res;
     }
 
+    private String generateChunkedHeaders(int statusCode) {
+        boolean missingPassword = false;
+        String CRLF = "\r\n";
+        String res = "";
+
+        // First response line
+        res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
+
+        // Date
+        res += "Date: " + getCurrentDate() + CRLF;
+
+        // Server
+        res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
+
+        // Last-Modified
+        res += "Last-Modified: " + lastModifiedDate + CRLF;
+
+        // Content-Type
+        res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
+
+        // Content-Length
+        res += "Transfer-Encoding: chunked" + CRLF + CRLF;
+        return res;
+    }
+
     public String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
         String perlInterpreter = "perl";
         ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
@@ -412,6 +496,32 @@ public class HTTPRequestHandler implements RequestHandler {
             output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
         }
         return output.toString();
+    }
+
+    public void runCGIProgramChunked(String programPath, String queryString, String remotePort, String serverPort, String method, HTTPResponseHandler responseHandler) throws IOException {
+        String perlInterpreter = "perl";
+        ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
+        processBuilder.environment().put("QUERY_STRING", queryString);
+        processBuilder.environment().put("REMOTE_*", remotePort);
+        processBuilder.environment().put("SERVER_*", serverPort);
+        processBuilder.environment().put("REQUEST_METHOD", method);
+
+
+        Process process = processBuilder.start();
+        InputStream inputStream = process.getInputStream();
+
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        StringBuilder output = new StringBuilder();
+        boolean createHeader = true;
+        String chunkedHeader = generateChunkedHeaders(200);
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            responseHandler.apply(buffer, bytesRead, chunkedHeader, false);
+            createHeader = false;
+//            output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
+        }
+        responseHandler.apply(buffer, 0, "", true);
+//        return output.toString();
     }
 
     public void readCharsToRequest(char c) {

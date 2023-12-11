@@ -40,6 +40,15 @@ public class HTTPServerWorkerThread implements Runnable {
 
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
+        HTTPResponseHandler responseHandler = (byteBuffer, bytesRead, header, responseIsFinished) -> {
+            if (responseIsFinished) {
+                ccb.setConnectionState(ConnectionState.WRITTEN);
+            }
+            writeBuffer.put(byteBuffer);
+            writeBuffer.flip();
+            ccb.setConnectionState(ConnectionState.WRITE);
+        };
+        requestHandler.getResponseContent(responseHandler);
         String response = requestHandler.getResponse();
 
 
