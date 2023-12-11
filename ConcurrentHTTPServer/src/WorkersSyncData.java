@@ -2,10 +2,12 @@ public class WorkersSyncData {
     private final int numWorkers;
     private int numConnections;
     private boolean serverIsRunning = true;
+    private final int maxAllowedConnections;
 
-    public WorkersSyncData(int numWorkers, int numConnections) {
+    public WorkersSyncData(int numWorkers, int numConnections, int maxAllowedConnections) {
         this.numConnections = numConnections;
         this.numWorkers = numWorkers;
+        this.maxAllowedConnections = maxAllowedConnections;
     }
 
     public boolean getServerIsRunning() {
@@ -31,4 +33,10 @@ public class WorkersSyncData {
     public int getNumConnections() {
         return numConnections;
     }
+
+    public boolean isServerOverloaded() {
+        System.out.println(getNumConnections());
+        return getNumConnections() > maxAllowedConnections;
+    }
+
 }

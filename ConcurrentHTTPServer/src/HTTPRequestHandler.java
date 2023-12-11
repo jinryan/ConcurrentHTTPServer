@@ -81,13 +81,18 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     // handle a request after having parsed it
-    public String handleRequest() {
+    public String handleRequest(WorkersSyncData syncData) {
         try {
             validateRequest();
+
+            checkIfLoad(requestMap.get("Path"), syncData);
+
             getPath(requestMap.get("Path"));
             authorizeRequest();
+
             String responseBody = processRequest();
             assert responseBody != null;
+
             return generateFullResponse(200, responseBody, false);
         } catch (ResponseException e) {
             return generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
@@ -135,6 +140,16 @@ public class HTTPRequestHandler implements RequestHandler {
         }
         if (!((requestMap.get("Method").equals("GET")) || requestMap.get("Method").equals("POST"))) {
             throw new ResponseException("Invalid method " + requestMap.get("Method"), 405);
+        }
+    }
+
+    private void checkIfLoad(String path, WorkersSyncData syncData) throws ResponseException{
+        if (path.equals("/load")) {
+            if (syncData.isServerOverloaded()) {
+                throw new ResponseException("Overloaded", 503);
+            } else {
+                throw new ResponseException("Server can accept connections", 200);
+            }
         }
     }
 

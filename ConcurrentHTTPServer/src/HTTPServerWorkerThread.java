@@ -18,9 +18,9 @@ public class HTTPServerWorkerThread implements Runnable {
 
     ServerConfigObject serverConfig;
 
-    public HTTPServerWorkerThread(WorkersSyncData syncdata, int workerID, ServerConfigObject serverConfig) {
+    public HTTPServerWorkerThread(WorkersSyncData syncData, int workerID, ServerConfigObject serverConfig) {
         this.serverConfig = serverConfig;
-        this.syncData = syncdata;
+        this.syncData = syncData;
         try {
             selector = Selector.open();
         } catch (IOException e) {
@@ -38,7 +38,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
-        String response = requestHandler.handleRequest();
+        String response = requestHandler.handleRequest(syncData);
 
 
 
@@ -56,6 +56,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
     private void closeSocket(SocketChannel socketChannel) {
         numActiveConnections--;
+        syncData.dropConnection();
         try {
             socketChannel.close();
         } catch (IOException e) {
@@ -140,6 +141,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
 
                         numActiveConnections++;
+                        syncData.addConnection();
 //                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 

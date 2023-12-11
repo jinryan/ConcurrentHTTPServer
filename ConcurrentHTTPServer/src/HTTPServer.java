@@ -31,7 +31,7 @@ public class HTTPServer {
         this.serverConfig = serverConfig;
         this.serverChannels = new ArrayList<ServerSocketChannel>();
         this.selectors = new ArrayList<>();
-        syncData = new WorkersSyncData(numWorkers, numTotalConnections);
+        syncData = new WorkersSyncData(numWorkers,0, numTotalConnections);
     }
 
     private void openServerChannel() {
