@@ -1,21 +1,85 @@
 # ConcurrentHTTPServer
-Select Multiplex Symmetric HTTP Server
+
+## Ryan Jin and Addison Goolsbee
+
+A robust HTTP 1.x server written in Java that allows for efficient handling of tens of thousands of simultaneous requests using its multithreaded master-worker symmetric design.
 
 ## Usage
-- Make sure you have **Java** installed
-- Install **IntelliJ IDEA**
-- Open this project with IntelliJ IDEA to the directory `ConcurrentHTTPServer/ConcurrentHTTPServer`
-- Run the project through the IntelliJ IDE
-- To specify a custom configuration file, add the argument -config {file_path}
 
-## Code Structure
-All code is within `ConcurrentHTTPServer/src`. 
+- Build the project with `javac -d out src/*.java src/ConfigParser/*.java`, this will create a folder `out/` with the compiled code
+- Run the project with `java -cp out Main`
+- Test the server with something like `curl -i localhost:8080`
+- To specify a custom configuration file, add the argument `-config {file_path}`
+
+### Configuration File
+
+The configuration file selected with the option `-config {file_path}` must follow the [Apache configuration style](http://httpd.apache.org/docs/2.4/vhosts/examples.html)
+
+The configuration file allows for specification of ports, server names, server resource root folders, and multiple virtual hosts, as well as a few environment variables
+
+The environment variables that must be defined are:
+
+- `Listen`: the port(s) the server will be open on
+- `nSelectLoops`: the number of active connections per worker thread
+
+The basic structure of a virtual host is as follows:
+
+```xml
+<VirtualHost *:6789>
+  DocumentRoot <root dir>
+  ServerName <server name>
+</VirtualHost>
+```
+
+## File Structure
+
+All code is within `src/`, there are 4 important files:
 
 - `Main` is the starting file, which reads in the configuration file and starts up the HTTPServer
-- `HTTPServer` Spawns the worker threads and then listens for user input to shutdown
-- `HTTPServerWorkerThread` is the finite state machine of an individual worker, which alternates between accept, reading, read, writing, and write, as specified by the enum `ConnectionState`
-- Upon reading in an entire HTTP request, as denounced by the double carriage line return feed, `HTTPRequestHandler` is triggered, which processes the input and generates an output, which is then sent back to the worker to write to the socket
-- When a worker thread initially accepts a connection, it creates a `ConnectionControlBlock` object to keep track of the state of that connection. It then cycles through other connections, based on nSelectLoops, which is specified in the configuration file
+- `HTTPServer` is the 'main thread', it spawns the worker thrads, monitors them, and listens for shutdown commands
+- `HTTPServerWorkerThread` is the finite state machine of an individual worker, which alternates between accept, reading, read, writing, and write, as specified by the enum `ConnectionState`. It cycles through multiple (nSelectLoops) multiplexed connections, allowing for many requests to be handled simultaneously
+- `HTTPRequestHandler` handles the parsing of fully received requests, and then generates the responses of those requests for both GET and POST requests
+
+Other files:
+
+- `ConfigParser/` contains a modified version of [Apache's Java config parser](https://github.com/stackify/apache-config/tree/c7401dcd466a38e89f8853276d3b5c070481b307/src/main/java/com/stackify/apache) to read .conf files into a tree object
+- `config.conf` is our default config file if none is provided
+- `ChannelTimeOutMonitor` iterates through all existing worker threads and checks that they haven't timed out. It is run every 0.5 seconds in `HTTPServer`
+- `ConnectionControlBlock` is essentially an object that contains all information regarding a current request/response, including two ByteBuffers for reading and writing. It maintains the state of the request
+- `ConnectionState` is an enum defining the 5 states a ConnectionControlBlock can be in
+- `HTTPRequestType` is an enum defining the acceptable HTTP request types (only GET and POST)
+- `RequestHandler` is an interface defining how requests should be handled. While we only have one implementation this interface (HTTP), having the interface allows us to be flexible and handle requests in a more modular approach, similar to NGINX
+- `ResponseException` is an exception type for HTTP status code errors during the request handler
+- `WorkersSyncData` is an object that contains global information about all workers. Every worker has access to this object
+
+## Request Handling
+
+The `HTTPRequestHandler` can handle a diverse range of headers, and works with both GET and POST (can perform CGI) methods. In both the request and the response, every line is separated by a carriage line return feed (\r\n)
+
+### Functional Request Headers
+
+- **First Line**: the first line of any request to the server must be in the format `<METHOD_NAME_ALL_CAPS> <URL> HTTP/1.1`, where the supported method names are **GET** and **POST**
+- `Host`: the virtual server to use (multiple web servers can be run on the same host, you can specify them in the configuration file)
+- `Accept`: allowed MIME types to be returned
+- `User-Agent`: the type of client device. The server may return mobile-optimized html files when the user agent is a mobile device
+- `If-Modified-Since`: conditional transfer: a date in which only if the server has modified the resource since, will it return it
+- `Connection`: methods for maintaining a connection between client and server. Accepts **close**, **keep-alive**
+- `Authorization`: if the requested resource's directory contains a `.htaccess` file, the server requires basic authorization in the format `Basic {base64-encoded string of username:password}`
+- `Content-Type`: in the case of a POST request, Content-Type is mandatory so the server knows how to parse the request body. Content-Type can only be application/x-www-form-urlencoded
+- `Content-Length`: in the case of a POST request, Content-Length is mandatory to tell the server the length of the request body
+- **Request Body**: in the case of a POST request, the request body starts with a double carriage line return feed, and should be in application/x-www-form-urlencoded format and look like the following: item1=A&item2=B
+
+### Response Headers
+
+- **First Line**: the first line of the response comes in the format `HTTP/1.1 <StatusCode> <StatusCodeMessage>`, where the status code and its accompanying message follow standard HTTP guidelines
+- `Date`: the current date at the time of sending the request
+- `Server`: Addison-Ryan Server Java/1.21 (the name of this server)
+- `Last-Modified`: the date the requested resource was last modified, for use with caching using the request header `If-Modified-Since`
+- `WWW-Authenticate`: a conditional header that appears if the requested resource required authorization and no authorization header was inputted
+- `Content-Type`: the MIME type of content returned
+- `Content-Length`: the length in bytes of the response body (excluding headers)
+- `Transfer-Encoding`: a conditional header which appears in the case of a POST request. The server uses CGI and the response is in a chunked transfer encoded format
+- **Response Body**: the response body begins with a double carriage line return feed, and contains the requested resource, as specified in `Content-Type` and `Content-Length`
 
 ## NGINX Comparisons
 
