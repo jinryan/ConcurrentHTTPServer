@@ -52,6 +52,10 @@ Other files:
 - `ResponseException` is an exception type for HTTP status code errors during the request handler
 - `WorkersSyncData` is an object that contains global information about all workers. Every worker has access to this object
 
+## Load Balancing
+
+When a new request is received by the server, a worker thread will initially try to add it to its set of ongoing requests. It will call the `overloaded()` function, and if the current worker has more requests ongoing than the average worker, it will not accept the current request, and instead pass it to the next worker. This is not as efficient as something like NGINX, as one request could potentially be passed between several workers before a worker accepts it, but it is still effective as a load balancing technique. In addition to this automatic load balancing between workers, there is also the problem of if ALL of the workers are at their capacity. To solve this, there is a virtual endpoint `/load` which returns `503` if the server is overloaded and `200` otherwise
+
 ## Request Handling
 
 The `HTTPRequestHandler` can handle a diverse range of headers, and works with both GET and POST (can perform CGI) methods. In both the request and the response, every line is separated by a carriage line return feed (\r\n)
