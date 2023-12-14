@@ -70,7 +70,7 @@ public class HTTPServer {
 
     // Every 0.5 seconds, check all threads to see if any have been stuck for more than 3 seconds, and close the channel if so
     private void startMonitoringTimeout() {
-        TimerTask timeoutMonitor = new ChannelTimeOutMonitor(this.selectors);
+        TimerTask timeoutMonitor = new ChannelTimeOutMonitor(this.selectors, syncData);
         Timer timer = new Timer();
         timer.schedule(timeoutMonitor, 0, 500);
     }

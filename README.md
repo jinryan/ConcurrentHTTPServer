@@ -54,6 +54,7 @@ curl -i -H "Accept: text/*" localhost:8080/test.txt
 curl -i -H "Accept: text/html" localhost:8080/test.txt
 curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080
 curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080
+curl -i localhost:8080/load
 
 Post Request:
 "POST /script.cgi HTTP/1.0" + CRLF

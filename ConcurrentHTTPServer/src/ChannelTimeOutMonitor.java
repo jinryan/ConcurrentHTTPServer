@@ -6,8 +6,10 @@ import java.util.TimerTask;
 
 public class ChannelTimeOutMonitor extends TimerTask {
     private final ArrayList<Selector> selectors;
+    private WorkersSyncData syncData;
 
-    public ChannelTimeOutMonitor(ArrayList<Selector> selectors) {
+    public ChannelTimeOutMonitor(ArrayList<Selector> selectors, WorkersSyncData syncData) {
+        this.syncData = syncData;
         this.selectors = selectors;
     }
 
@@ -21,6 +23,7 @@ public class ChannelTimeOutMonitor extends TimerTask {
                     // if the last time this selector read something was more than 3 seconds ago, close the channel
                     if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 3.0) {
                         try {
+                            syncData.dropConnection();
                             key.channel().close();
                             key.cancel();
                         } catch (IOException e) {
