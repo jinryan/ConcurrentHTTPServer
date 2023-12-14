@@ -545,7 +545,6 @@ public class HTTPRequestHandler implements RequestHandler {
         processBuilder.environment().put("SERVER_*", serverPort);
         processBuilder.environment().put("REQUEST_METHOD", method);
 
-
         Process process = processBuilder.start();
         InputStream inputStream = process.getInputStream();
 
