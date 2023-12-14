@@ -1,7 +1,3 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.io.*;
@@ -13,6 +9,9 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+import javax.tools.StandardJavaFileManager;
+
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -80,26 +79,11 @@ public class HTTPRequestHandler implements RequestHandler {
         }
     }
 
-    // handle a request after having parsed it
-//    public String handleRequest(WorkersSyncData syncData) {
-//        try {
-//            validateRequest();
-//
-//            checkIfLoad(requestMap.get("Path"), syncData);
-//
-//            getPath(requestMap.get("Path"));
-//            authorizeRequest();
-//
-//            String responseBody = processRequest();
-//            assert responseBody != null;
-//
-//            return generateFullResponse(200, responseBody, false);
-//        } catch (ResponseException e) {
-//            return generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
-//        }
-//    }
 
     public void handleRequest(HTTPResponseHandler responseHandler, WorkersSyncData syncData) {
+        // System.out.println("(103) ====== Request BEGINS ======");
+        // System.out.println(request);
+        // System.out.println("(105) ====== ENDS BEGINS ======");
         try {
             validateRequest();
             checkIfLoad(requestMap.get("Path"), syncData);
@@ -110,18 +94,17 @@ public class HTTPRequestHandler implements RequestHandler {
                 processChunkedRequest(responseHandler);
             } else {
                 // Non-chunk encoding
-                String httpResponse = processRequest();
+                byte[] httpResponse = processRequest();
                 assert httpResponse != null;
 
-                byte[] responseBytes = httpResponse.getBytes();
-                responseHandler.apply(responseBytes, responseBytes.length, false);
-                responseHandler.apply(responseBytes, 0, true);
+                responseHandler.apply(httpResponse, httpResponse.length, false);
+                responseHandler.apply(httpResponse, 0, true);
             }
         } catch (ResponseException e) {
-            String httpResponse = generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
-            byte[] responseBytes = httpResponse.getBytes();
-            responseHandler.apply(responseBytes, responseBytes.length, false);
-            responseHandler.apply(responseBytes, 0, true);
+            String message = e.getStatusCode() + " " + e.getMessage();
+            byte[] httpResponse = generateFullResponse(e.getStatusCode(), message.getBytes(), e.getHasEmptyAuthentication());
+            responseHandler.apply(httpResponse, httpResponse.length, false);
+            responseHandler.apply(httpResponse, 0, true);
         }
     }
 
@@ -442,14 +425,15 @@ public class HTTPRequestHandler implements RequestHandler {
         return res;
     }
 
-    private String processRequest() throws ResponseException{
-        String responseBody;
+    private byte[] processRequest() throws ResponseException{
+        byte[] responseBody;
 
         try {
             if (requestMap.get("Method").equals("GET")) {
                 responseBody = processGET();
             } else if (requestMap.get("Method").equals("POST")) {
-                responseBody =  processPOST();
+                String stringResponseBody =  processPOST();
+                return stringResponseBody.getBytes();
 
             } else {
                 throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
@@ -462,9 +446,11 @@ public class HTTPRequestHandler implements RequestHandler {
         return null;
     }
 
-    private String processGET() throws ResponseException, IOException {
-        String response;
+    private byte[] processGET() throws ResponseException, IOException {
+        byte[] response;
         File responseFile = getPath(requestMap.get("Path"));
+        // System.out.println("File path: ");
+        // System.out.println(responseFile.getAbsolutePath());
         checkType(filePath);
 
         lastModifiedDate = getLastModifiedDate(responseFile);
@@ -473,7 +459,11 @@ public class HTTPRequestHandler implements RequestHandler {
                 throw new ResponseException("File is cached", 304);
             }
         }
+
+
+        
         response = getFileOutput(responseFile);
+        // System.out.println("File output length is " + response.length);
         return response;
     }
 
@@ -481,8 +471,10 @@ public class HTTPRequestHandler implements RequestHandler {
         String mimeType = Files.probeContentType(Paths.get(uri));
         fileType = mimeType;
 
-        if (mimeType == null)
+        if (mimeType == null) {
+            
             throw new ResponseException("Invalid file type: requested file is a folder", 406);
+        }
 
         if (requestMap.get("Accept") != null) {
             String[] types = requestMap.get("Accept").split(",\\s*");
@@ -491,8 +483,10 @@ public class HTTPRequestHandler implements RequestHandler {
             String mimeEnd = mimeType.substring(mimeType.indexOf("/") + 1);
 
             for (String type : types) {
+
                 String typeStart = type.substring(0, type.indexOf("/"));
                 String typeEnd  = type.substring(type.indexOf("/") + 1);
+                typeEnd = typeEnd.split(";")[0];
                 if ((typeStart.equals(mimeStart) || typeStart.equals("*")) && (typeEnd.equals(mimeEnd) || typeEnd.equals("*"))) {
                     return;
                 }
@@ -529,16 +523,9 @@ public class HTTPRequestHandler implements RequestHandler {
         }
     }
 
-    private String getFileOutput(File responseFile) throws IOException{
-        StringBuilder content = new StringBuilder();
-        BufferedReader reader = new BufferedReader(new FileReader(responseFile));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            content.append(line);
-            content.append(System.lineSeparator());
-        }
-        reader.close();
-        return content.toString();
+    private byte[] getFileOutput(File responseFile) throws IOException{
+        byte[] fileContent = Files.readAllBytes(responseFile.toPath());
+        return fileContent;
     }
 
     private String processPOST() throws IOException, ResponseException {
@@ -582,7 +569,7 @@ public class HTTPRequestHandler implements RequestHandler {
         return output.toString();
     }
 
-    private String generateFullResponse(int statusCode, String responseBody, boolean hasEmptyAuthentication) {
+    private byte[] generateFullResponse(int statusCode, byte[] responseBody, boolean hasEmptyAuthentication) {
         String CRLF = "\r\n";
         String res = "";
 
@@ -600,17 +587,25 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // WWW-Authenticate
         if (hasEmptyAuthentication) {
-            res += "WWW-Authenticate: Basic Realm=" + responseBody.substring(1) + CRLF;
+            String responseBodyStr = new String(responseBody, StandardCharsets.UTF_8);
+            res += "WWW-Authenticate: Basic Realm=" + responseBodyStr.substring(1) + CRLF;
         }
 
         // Content-Type
         res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
 
         // Content-Length
-        res += "Content-Length: " + (responseBody.getBytes().length) + CRLF + CRLF;
+        res += "Content-Length: " + (responseBody.length) + CRLF + CRLF;
 
-        res += responseBody;
+        byte[] responseHeader = res.getBytes();
 
-        return res;
+        byte[] combined = new byte[responseHeader.length + responseBody.length];
+
+        for (int i = 0; i < combined.length; ++i)
+        {
+            combined[i] = i < responseHeader.length ? responseHeader[i] : responseBody[i - responseHeader.length];
+        }
+
+        return combined;
     }
 }

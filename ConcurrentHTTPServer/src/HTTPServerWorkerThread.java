@@ -75,9 +75,8 @@ public class HTTPServerWorkerThread implements Runnable {
                 ccb.setConnectionState(ConnectionState.WRITTEN);
             } else {
                 // Otherwise, write byte buffer
-
+                // System.out.println("Supposed to write " + bytesRead + " bytes");
                 for (int i = 0; i < bytesRead; i++) {
-
                     writeBuffer.put(byteBuffer[i]);
                 }
                 ccb.setConnectionState(ConnectionState.WRITE);
@@ -105,7 +104,7 @@ public class HTTPServerWorkerThread implements Runnable {
     private void updateCCBOnRead(int readBytes, ConnectionControlBlock ccb) {
         ByteBuffer readBuffer = ccb.getReadBuffer();
         StringBuffer request = ccb.getRequest();
-        if (readBytes == -1) {
+        if (readBytes == -1 && ccb.getReadBuffer().position() != 0) {
             ccb.setConnectionState(ConnectionState.READ);
         } else {
             readBuffer.flip();
@@ -123,7 +122,6 @@ public class HTTPServerWorkerThread implements Runnable {
             ccb.setLastReadTime(System.currentTimeMillis());
         }
         readBuffer.clear();
-        ccb.updateConnectionState();
     }
 
     private void updateCCBOnWrite(int writeBytes, ConnectionControlBlock ccb) {
@@ -209,12 +207,13 @@ public class HTTPServerWorkerThread implements Runnable {
                         SocketChannel client = (SocketChannel) key.channel();
 
                         int readBytes = client.read(ccb.getReadBuffer());
-                        System.out.println("Read " + readBytes + " bytes");
                         updateCCBOnRead(readBytes, ccb);
+                        // System.out.println("Read " + readBytes + " bytes");
 
                         // If done reading, generate response
                         if (ccb.getConnectionState() == ConnectionState.READ) {
                             // Generate Response
+                            // System.out.println("done reading :))");
                             generateResponse(ccb);
                         }
                     }
@@ -230,10 +229,12 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
-//                        System.out.println("Wrote " + writeBytes + " bytes");
+                    //    System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
+
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
+                            
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);
@@ -245,6 +246,24 @@ public class HTTPServerWorkerThread implements Runnable {
 
                                 HTTPRequestHandler newHttpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
                                 ccb.setRequestHandler(newHttpRequestHandler);
+                                key.cancel();
+                                readyKeys.remove(key);
+
+                                
+                                // key = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+
+                                // Create CCB
+                                ccb = new ConnectionControlBlock();
+                                ccb.setConnectionState(ConnectionState.READING);
+                                ccb.setLastReadTime(System.currentTimeMillis());
+
+                                // Set HTTP Request Handler
+                                HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
+                                ccb.setRequestHandler(httpRequestHandler);
+
+
+                                // Attach to key
+                                key.attach(ccb);
 
                             } else {
                                 closeSocket(client);
@@ -253,11 +272,14 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
                     }
                 } catch (IOException e) {
-                    System.out.println("Server already shut down");
-                    break;
-//                    e.printStackTrace();
+                    // System.out.println("Server already shut down");
+                    
+                   e.printStackTrace();
+                   break;
                 } catch (CancelledKeyException e) {
-                    System.out.println("Server already shut down");
+                    // System.out.println("Server already shut down");
+                    // break;
+                    e.printStackTrace();
                     break;
                 }
             }
