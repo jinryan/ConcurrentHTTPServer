@@ -237,7 +237,7 @@ public class HTTPServerWorkerThread implements Runnable {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);
-    //                                System.out.println("Connection alive");
+                                   System.out.println("Connection alive");
 
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());
