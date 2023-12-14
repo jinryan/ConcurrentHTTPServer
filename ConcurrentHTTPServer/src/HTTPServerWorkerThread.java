@@ -17,6 +17,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
 
     public HTTPServerWorkerThread(WorkersSyncData syncData, int workerID, ServerConfigObject serverConfig) {
+        System.out.println("Worker spawned with id " + workerID);
         this.serverConfig = serverConfig;
         this.syncData = syncData;
         try {

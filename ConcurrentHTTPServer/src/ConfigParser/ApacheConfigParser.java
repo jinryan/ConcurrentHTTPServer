@@ -122,9 +122,9 @@ public class ApacheConfigParser {
 					port = Integer.parseInt(child.getContent());
 					serverConfig.addPort(port);
 					continue;
-				} else if (child.getName().equals("nSelectLoop")) {
+				} else if (child.getName().equals("nSelectLoops")) {
 					int loop = Integer.parseInt(child.getContent());
-					serverConfig.setnSelectLoop(loop);
+					serverConfig.setnSelectLoops(loop);
 					continue;
 				} else if (child.getName().equals("VirtualHost")) {
 					String portString = child.getContent();

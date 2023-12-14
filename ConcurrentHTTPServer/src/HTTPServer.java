@@ -22,7 +22,7 @@ public class HTTPServer {
     WorkersSyncData syncData;
     ServerConfigObject serverConfig;
     public HTTPServer(int numWorkers, int idealAveragePerWorker, ServerConfigObject serverConfig) {
-        HTTPServer.numWorkers = serverConfig.getnSelectLoop();
+        HTTPServer.numWorkers = serverConfig.getnSelectLoops();
         // HTTPServer.idealAveragePerWorker = 8;
         HTTPServer.numTotalConnections = numWorkers * idealAveragePerWorker;
         this.ports = serverConfig.getPorts();

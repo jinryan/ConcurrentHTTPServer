@@ -7,19 +7,19 @@ public class ServerConfigObject {
 
     private final HashMap<Integer, HashMap<String, String>> mapping;
     private final ArrayList<Integer> ports;
-    private int nSelectLoop = 8; // Default connection each worker manages
+    private int nSelectLoops = 8; // Default connection each worker manages if config not specified
 
     public ServerConfigObject() {
         this.mapping = new HashMap<Integer, HashMap<String, String>>();
         this.ports = new ArrayList<Integer>();
     }
 
-    public void setnSelectLoop(int nSelectLoop) {
-        this.nSelectLoop = nSelectLoop;
+    public void setnSelectLoops(int nSelectLoop) {
+        this.nSelectLoops = nSelectLoop;
     }
 
-    public int getnSelectLoop() {
-        return this.nSelectLoop;
+    public int getnSelectLoops() {
+        return this.nSelectLoops;
     }
 
     public void addPort(int port) {
