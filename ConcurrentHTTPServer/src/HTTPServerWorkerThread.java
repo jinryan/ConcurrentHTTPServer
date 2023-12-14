@@ -3,7 +3,6 @@ import ConfigParser.ServerConfigObject;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -36,33 +35,7 @@ public class HTTPServerWorkerThread implements Runnable {
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
 
-
-        /*
-        String response = requestHandler.handleRequest(syncData);
-
-
-
-        // Generate Response
-        System.out.print("Response: =====");
-        for (int i = 0; i < response.length(); i++) {
-            char ch = response.charAt(i);
-            writeBuffer.put((byte) ch);
-            System.out.print((byte) ch);
-        }
-        System.out.print("====Response ENDS");
-
-
-        // Update state
-        writeBuffer.flip();
         ccb.setConnectionState(ConnectionState.WRITE);
-
-        return;
-        */
-
-        ccb.setConnectionState(ConnectionState.WRITE);
-//        System.out.println(ccb.getConnectionState());
-
-
 
         HTTPResponseHandler responseWriter = (byteBuffer, bytesRead, responseIsFinished) -> {
             if (responseIsFinished) {
@@ -81,14 +54,9 @@ public class HTTPServerWorkerThread implements Runnable {
                 }
                 ccb.setConnectionState(ConnectionState.WRITE);
             }
-
         };
 
-        // Handle response
-
         requestHandler.handleRequest(responseWriter, syncData);
-
-
     }
 
     private void closeSocket(SocketChannel socketChannel) {
@@ -238,7 +206,7 @@ public class HTTPServerWorkerThread implements Runnable {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);
-    //                                System.out.println("Connection alive");
+                                   System.out.println("Connection alive");
 
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());

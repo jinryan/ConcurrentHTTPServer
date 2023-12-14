@@ -1,0 +1,81 @@
+==== Setup ====
+- download https://zoo.cs.yale.edu/classes/cs434/cs434-2023-fall/assignments/programming-proj1/test-meeting.tar
+- tar xvf test-meeting.tar
+- start server using the test-http.conf under test-meeting
+- the test steps are in test-cases.txt
+
+==== HTTP Functions ====
+
+- [Target 1]: Conform to request header and response
+  telnet localhost 6789
+  GeT /index.html HTTP/1.1
+  GET /index.html HTTP/1.1
+  GET /index.txt HTTP/1.1
+  
+  Response should include Date header, Server header, Content-Type header
+    Content-Length matches file size
+    Last-Modified matches file modification time ()
+    Content-Type matches file suffix
+
+  Can also visit using browser: http://localhost:6789/index.html
+
+
+- [Target 2] GET /index.html HTTP/1.1
+  Wait without issuing new line
+  [Q: when is it that a request is in process?]
+
+- [Target 3]: understand Host, give two different host names
+curl -v -H "Host: host1.cs.yale.edu" http://localhost:6789/index.html
+curl -v -H "Host: host2.cs.yale.edu" http://localhost:6789/index.html
+
+- [Target 4] Understand Accept
+// error case
+curl -v -H "Accept: a/b" http://localhost:6789/index.html
+
+- [Target 5]: User agent adaptation
+curl -v -H "User-Agent: my-iPhone" http://localhost:6789/
+
+- [Target 6]: If-Modified-Since [read file modification time at server and issue before and after]
+curl -v -H "If-Modified-Since: Tue, 12 Dec 2023 19:29:46 GMT" http://localhost:6789/index.html
+
+- [Target 7]: Connection
+curl -v -H "Connection: close" http://localhost:6789/index.html http://localhost:6789/index.html
+curl -v -H "Connection: keep-alive" http://localhost:6789/index.html http://localhost:6789/index.html
+
+- [Target 8]: Authorization
+curl -v http://cs434:passw0rd.@localhost:6789/protect/index.html
+
+www-authenticate bonus
+
+- [Target 9]: POST and CGI
+curl -v -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "param1=val&param2=val" http://localhost:6789/test-cgi.cgi
+curl -v -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Transfer-Encoding: chunked" -d "@test-cgi-stdin.data" http://localhost:6789/test-cgi.cgi
+
+[How does your server handle CGI script error/crash]
+
+==== Server structure ====
+
+- [Target 10] management and graceful shutdown test
+   Approach 1: telnet
+    telnet send partial request
+
+   Approach 2: curl 
+   step 0. test if limit-rate works
+   curl -v --limit-rate 1K https://zoo.cs.yale.edu/classes/cs434/cs434-2023-fall/assignments/programming-proj1/alice_in_wonderland.txt
+
+   step 1. curl -v --limit-rate 2K http://localhost:6789/data.txt
+   step 2. issue shutdown in the management terminal
+
+- [Target 11] timeout implementation [test in TC2]
+
+- [Target 12] load design and implementation
+  telnet
+  GET /load HTTP/1.1
+  Connection: Keep-alive
+  [Q: how is it implemented?]
+
+- [Target 13] nSelect structure design
+
+- [Target 14] Phase/pipeline structure
+
+- [Target 15 Additional/interesting designs, any benchmarking]

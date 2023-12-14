@@ -14,7 +14,7 @@ public class Main {
         }
         serverConfig = ApacheConfigParser.getServerConfigFrom(configPath);
 
-        HTTPServer server = new HTTPServer(8, 8, serverConfig);
+        HTTPServer server = new HTTPServer(8, serverConfig);
         server.start();
     }
 }

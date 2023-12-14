@@ -9,9 +9,6 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
-import javax.tools.StandardJavaFileManager;
-
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -31,6 +28,7 @@ public class HTTPRequestHandler implements RequestHandler {
     private int i;
     private int expectedContentFromBody;
     private boolean readingBody = false;
+    public boolean isRequestBroken = false;
 
     private static final Map<Integer, String> statusCodeMessages;
 
@@ -57,10 +55,21 @@ public class HTTPRequestHandler implements RequestHandler {
     // given a request, parse the headers into a hashmap (requestMap), and the body into the "Body" field of the hashmap
     public void parseRequest() {
         String[] lines = this.request.split("\\r\\n");
+        if (lines.length == 0) {
+            isRequestBroken = true;
+            return;
+        }
+
         String[] requestLine = lines[0].split(" ");
+        if (requestLine.length != 3) {
+            isRequestBroken = true;
+            return;
+        }
+
         requestMap.put("Method", requestLine[0]);
         requestMap.put("Path", requestLine[1]);
         requestMap.put("Version", requestLine[2]);
+
         int bodyStartIndex = -1;
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) {
@@ -183,40 +192,6 @@ public class HTTPRequestHandler implements RequestHandler {
         responseHandler.apply(null, 0, true);
     }
 
-    private String generateHeaders(int statusCode, String responseBody) {
-        boolean missingPassword = false;
-        String CRLF = "\r\n";
-        String res = "";
-
-        // First response line
-        res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
-
-        // Date
-        res += "Date: " + getCurrentDate() + CRLF;
-
-        // Server
-        res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
-
-        // Last-Modified
-        res += "Last-Modified: " + lastModifiedDate + CRLF;
-
-        // Optional WWW-Authenticate
-        if ((statusCode == 401) && (responseBody.charAt(0) == '~')) {
-            res += "WWW-Authenticate: Basic Realm=" + responseBody.substring(1) + CRLF;
-            missingPassword = true;
-        }
-
-        // Content-Type
-        res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
-
-        // Content-Length
-        res += "Content-Length: " + (missingPassword ? 0 : responseBody.getBytes().length) + CRLF + CRLF;
-
-        res += (missingPassword ? "" : responseBody);
-
-        return res;
-    }
-
     private byte[] generateChunkedHeaders(int statusCode) {
         String CRLF = "\r\n";
         String res = "";
@@ -277,6 +252,9 @@ public class HTTPRequestHandler implements RequestHandler {
 
     // Make sure request is formatted legitimately
     private void validateRequest() throws ResponseException {
+        if (isRequestBroken) {
+            throw new ResponseException("Invalid request", 500);
+        }
         if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
             throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
@@ -375,25 +353,33 @@ public class HTTPRequestHandler implements RequestHandler {
             Map<String, String> htaccessMap = parseHtaccess(htaccessFile);
 
             // check if auth header exists and is valid
-            if (!(requestMap.get("Authorization") != null && requestMap.get("Authorization").startsWith("Basic "))) {
+            if (requestMap.get("Authorization") == null) {
                 throw new ResponseException("Unauthorized: " + htaccessMap.get("AuthName"), 401, true);
             } else {
-                // decode auth header
+                if (!requestMap.get("Authorization").startsWith("Basic ")) {
+                    throw new RuntimeException();
+                }
+
                 String encodedAuth = requestMap.get("Authorization").substring(requestMap.get("Authorization").indexOf(" ") + 1);
                 try {
                     byte[] decodedBytes = Base64.getDecoder().decode(encodedAuth);
-
+                    
                     String decodedString = new String(decodedBytes);
-                    String[] credentials = decodedString.split(":");
 
-                    if (credentials.length != 2)
+                    String[] parts = decodedString.split(":", 2); // Split into username and password
+
+                    if (parts.length != 2) {
                         throw new RuntimeException();
+                    }
 
-                    String username = credentials[0];
-                    String password = credentials[1];
+                    String username = parts[0];
+                    String password = parts[1];
+
+                    String encodedUsername = Base64.getEncoder().encodeToString(username.getBytes());
+                    String encodedPassword = Base64.getEncoder().encodeToString(password.getBytes());
 
                     // check that username and password match
-                    if (!username.equals(htaccessMap.get("User")) || !password.equals(htaccessMap.get("Password"))) {
+                    if (!encodedUsername.equals(htaccessMap.get("User")) || !encodedPassword.equals(htaccessMap.get("Password"))) {
                         throw new RuntimeException();
                     }
 
