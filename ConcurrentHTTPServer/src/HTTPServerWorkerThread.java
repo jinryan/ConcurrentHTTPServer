@@ -35,33 +35,7 @@ public class HTTPServerWorkerThread implements Runnable {
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
 
-
-        /*
-        String response = requestHandler.handleRequest(syncData);
-
-
-
-        // Generate Response
-        System.out.print("Response: =====");
-        for (int i = 0; i < response.length(); i++) {
-            char ch = response.charAt(i);
-            writeBuffer.put((byte) ch);
-            System.out.print((byte) ch);
-        }
-        System.out.print("====Response ENDS");
-
-
-        // Update state
-        writeBuffer.flip();
         ccb.setConnectionState(ConnectionState.WRITE);
-
-        return;
-        */
-
-        ccb.setConnectionState(ConnectionState.WRITE);
-//        System.out.println(ccb.getConnectionState());
-
-
 
         HTTPResponseHandler responseWriter = (byteBuffer, bytesRead, responseIsFinished) -> {
             if (responseIsFinished) {
@@ -74,21 +48,15 @@ public class HTTPServerWorkerThread implements Runnable {
                 ccb.setConnectionState(ConnectionState.WRITTEN);
             } else {
                 // Otherwise, write byte buffer
-
                 for (int i = 0; i < bytesRead; i++) {
 
                     writeBuffer.put(byteBuffer[i]);
                 }
                 ccb.setConnectionState(ConnectionState.WRITE);
             }
-
         };
 
-        // Handle response
-
         requestHandler.handleRequest(responseWriter, syncData);
-
-
     }
 
     private void closeSocket(SocketChannel socketChannel) {

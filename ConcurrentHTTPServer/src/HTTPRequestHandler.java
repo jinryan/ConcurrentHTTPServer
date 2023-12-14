@@ -33,6 +33,7 @@ public class HTTPRequestHandler implements RequestHandler {
     private int i;
     private int expectedContentFromBody;
     private boolean readingBody = false;
+    public boolean isRequestBroken = false;
 
     private static final Map<Integer, String> statusCodeMessages;
 
@@ -59,10 +60,21 @@ public class HTTPRequestHandler implements RequestHandler {
     // given a request, parse the headers into a hashmap (requestMap), and the body into the "Body" field of the hashmap
     public void parseRequest() {
         String[] lines = this.request.split("\\r\\n");
+        if (lines.length == 0) {
+            isRequestBroken = true;
+            return;
+        }
+
         String[] requestLine = lines[0].split(" ");
+        if (requestLine.length != 3) {
+            isRequestBroken = true;
+            return;
+        }
+
         requestMap.put("Method", requestLine[0]);
         requestMap.put("Path", requestLine[1]);
         requestMap.put("Version", requestLine[2]);
+
         int bodyStartIndex = -1;
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) {
@@ -261,6 +273,9 @@ public class HTTPRequestHandler implements RequestHandler {
 
     // Make sure request is formatted legitimately
     private void validateRequest() throws ResponseException {
+        if (isRequestBroken) {
+            throw new ResponseException("Invalid request", 500);
+        }
         if (!(requestMap.get("Version").startsWith("HTTP/") && (requestMap.get("Version").endsWith("0.9") || requestMap.get("Version").endsWith("1.0") || requestMap.get("Version").endsWith("1.1")))) {
             throw new ResponseException("Invalid HTTP version: " + requestMap.get("Version"), 400);
         }
