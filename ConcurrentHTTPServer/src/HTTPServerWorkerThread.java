@@ -3,6 +3,7 @@ import ConfigParser.ServerConfigObject;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -48,11 +49,15 @@ public class HTTPServerWorkerThread implements Runnable {
                 ccb.setConnectionState(ConnectionState.WRITTEN);
             } else {
                 // Otherwise, write byte buffer
-                // System.out.println("Supposed to write " + bytesRead + " bytes");
+                // System.out.println("Point 2 Supposed to write " + bytesRead + " bytes");
                 for (int i = 0; i < bytesRead; i++) {
                     writeBuffer.put(byteBuffer[i]);
                 }
                 ccb.setConnectionState(ConnectionState.WRITE);
+                String responseContent = new String(byteBuffer, StandardCharsets.UTF_8);
+                // System.out.println("====== RESPONSE BEGINS ========");
+                // System.out.println(responseContent);
+                // System.out.println("====== RESPONSE BEGINS ========");
             }
         };
 
@@ -197,7 +202,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
-                    //    System.out.println("Wrote " + writeBytes + " bytes");
+                        System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
 
                         // When finish writing, close socket

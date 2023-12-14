@@ -103,6 +103,7 @@ public class HTTPRequestHandler implements RequestHandler {
                 processChunkedRequest(responseHandler);
             } else {
                 // Non-chunk encoding
+                // System.out.println("c");
                 byte[] httpResponse = processRequest();
                 assert httpResponse != null;
 
@@ -235,8 +236,9 @@ public class HTTPRequestHandler implements RequestHandler {
                 && lastFour[(i-3) % 4] == '\n'
                 && lastFour[(i-4) % 4] == '\r') {
             parseRequest();
-            if (requestMap.containsKey("Content-length")) {
-                expectedContentFromBody = Integer.parseInt(requestMap.get("Content-length"));
+            if (requestMap.containsKey("Content-Length")) {
+                expectedContentFromBody = Integer.parseInt(requestMap.get("Content-Length"));
+                // System.out.println("Expecting " + expectedContentFromBody + " of content");
                 readingBody = true;
             } else {
                 return true;
@@ -418,8 +420,8 @@ public class HTTPRequestHandler implements RequestHandler {
             if (requestMap.get("Method").equals("GET")) {
                 responseBody = processGET();
             } else if (requestMap.get("Method").equals("POST")) {
-                String stringResponseBody =  processPOST();
-                return stringResponseBody.getBytes();
+                // System.out.println("POST");
+                responseBody = processPOST();
 
             } else {
                 throw new ResponseException("Invalid method: " + requestMap.get("Method"), 405);
@@ -514,7 +516,7 @@ public class HTTPRequestHandler implements RequestHandler {
         return fileContent;
     }
 
-    private String processPOST() throws IOException, ResponseException {
+    private byte[] processPOST() throws IOException, ResponseException {
         int port = socketChannel.socket().getLocalPort();
         lastModifiedDate = getCurrentDate();
 
@@ -529,11 +531,13 @@ public class HTTPRequestHandler implements RequestHandler {
         }
 
         String queryString = requestMap.get("Body");
-
-        return runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
+        String returnContent = runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
+        // System.out.println("Point 1 has " + returnContent.length() + " bytes ");
+        return returnContent.getBytes();
     }
 
     private String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
+        System.out.println("1");
         String perlInterpreter = "perl";
         ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
         processBuilder.environment().put("QUERY_STRING", queryString);
@@ -549,9 +553,12 @@ public class HTTPRequestHandler implements RequestHandler {
         int bytesRead;
         StringBuilder output = new StringBuilder();
 
+        System.out.println("2");
+
         while ((bytesRead = inputStream.read(buffer)) != -1) {
             output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
         }
+        System.out.println("Point 1 has " + output.length() + " bytes ");
         return output.toString();
     }
 
