@@ -2,10 +2,7 @@ import ConfigParser.ServerConfigObject;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Set;
@@ -90,7 +87,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
         // Handle response
 
-        requestHandler.handleRequest(responseWriter);
+        requestHandler.handleRequest(responseWriter, syncData);
 
 
     }
@@ -239,7 +236,7 @@ public class HTTPServerWorkerThread implements Runnable {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);
-//                                System.out.println("Connection alive");
+    //                                System.out.println("Connection alive");
 
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());
@@ -255,7 +252,12 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("Server already shut down");
+                    break;
+//                    e.printStackTrace();
+                } catch (CancelledKeyException e) {
+                    System.out.println("Server already shut down");
+                    break;
                 }
             }
         }

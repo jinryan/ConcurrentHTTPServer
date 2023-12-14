@@ -53,6 +53,29 @@ curl -i -H "Accept: text/*" localhost:8080/folder/a.txt
 curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
 curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
 curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
+
+Post Request:
+"POST /script.cgi HTTP/1.0" + CRLF
+		+ "Host: server2.com" + CRLF
+		+ "Accept: www/source" + CRLF
+		+ "Accept: text/html" + CRLF
+		+ "Accept: text/plain" + CRLF
+		+ "User-Agent: Lynx/2.4 libwww/2.14" + CRLF
+		+ "Content-type: application/x-www-form-urlencoded" + CRLF
+		+ "Transfer-Encoding: chunked" + CRLF
+		+ "Content-length: 30" + CRLF + CRLF
+		+ "q=Larry Bird&l=35&pass=testing";
+
+Keep Connection Alive Request:
+
+sentence = "GET / HTTP/1.1" + CRLF
+		+ "Host: server1.com" + CRLF
+		+ "Accept: text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8" + CRLF
+		+ "Accept-Language: en-US,en;q=0.5" + CRLF
+		+ "Cache-Control: no-cache" + CRLF
+		+ "Connection: keep-alive" + CRLF
+		+ "Authorization: Bearer myAccessToken123" + CRLF + CRLF;
+
 ```
 
 ## File Structure
@@ -130,42 +153,41 @@ Completed 9000 requests
 Completed 10000 requests
 Finished 10000 requests
 
+Server Software: Addison-Ryan
+Server Hostname: localhost
+Server Port: 8080
 
-Server Software:        Addison-Ryan
-Server Hostname:        localhost
-Server Port:            8080
+Document Path: /folder/a.txt
+Document Length: 21 bytes
 
-Document Path:          /folder/a.txt
-Document Length:        21 bytes
-
-Concurrency Level:      10
-Time taken for tests:   3.994 seconds
-Complete requests:      10000
-Failed requests:        0
-Total transferred:      2080000 bytes
-HTML transferred:       210000 bytes
-Requests per second:    2503.64 [#/sec] (mean)
-Time per request:       3.994 [ms] (mean)
-Time per request:       0.399 [ms] (mean, across all concurrent requests)
-Transfer rate:          508.55 [Kbytes/sec] received
+Concurrency Level: 10
+Time taken for tests: 3.994 seconds
+Complete requests: 10000
+Failed requests: 0
+Total transferred: 2080000 bytes
+HTML transferred: 210000 bytes
+Requests per second: 2503.64 [#/sec] (mean)
+Time per request: 3.994 [ms] (mean)
+Time per request: 0.399 [ms] (mean, across all concurrent requests)
+Transfer rate: 508.55 [Kbytes/sec] received
 
 Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    1   1.1      1      27
-Processing:     0    2   1.6      2      30
-Waiting:        0    2   1.4      2      27
-Total:          1    4   1.9      3      33
+min mean[+/-sd] median max
+Connect: 0 1 1.1 1 27
+Processing: 0 2 1.6 2 30
+Waiting: 0 2 1.4 2 27
+Total: 1 4 1.9 3 33
 
 Percentage of the requests served within a certain time (ms)
-  50%      3
-  66%      4
-  75%      4
-  80%      5
-  90%      5
-  95%      6
-  98%      7
-  99%      9
- 100%     33 (longest request)
+50% 3
+66% 4
+75% 4
+80% 5
+90% 5
+95% 6
+98% 7
+99% 9
+100% 33 (longest request)
 
 ## NGINX Comparisons
 

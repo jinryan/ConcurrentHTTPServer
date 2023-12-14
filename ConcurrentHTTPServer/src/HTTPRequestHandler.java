@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -82,28 +81,31 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     // handle a request after having parsed it
-    public String handleRequest(WorkersSyncData syncData) {
-        try {
-            validateRequest();
-
-            checkIfLoad(requestMap.get("Path"), syncData);
-
-            getPath(requestMap.get("Path"));
-            authorizeRequest();
-
-            String responseBody = processRequest();
-            assert responseBody != null;
-
-            return generateFullResponse(200, responseBody, false);
-        } catch (ResponseException e) {
-            return generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
-        }
-    }
+//    public String handleRequest(WorkersSyncData syncData) {
+//        try {
+//            System.out.println("honk");
+//            validateRequest();
+//
+//            System.out.println("here2");
+//            checkIfLoad(requestMap.get("Path"), syncData);
+//
+//            getPath(requestMap.get("Path"));
+//            authorizeRequest();
+//
+//            String responseBody = processRequest();
+//            assert responseBody != null;
+//
+//            return generateFullResponse(200, responseBody, false);
+//        } catch (ResponseException e) {
+//            return generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
+//        }
+//    }
 
     @Override
-    public void handleRequest(HTTPResponseHandler responseHandler) {
+    public void handleRequest(HTTPResponseHandler responseHandler, WorkersSyncData syncData) {
         try {
             validateRequest();
+            checkIfLoad(requestMap.get("Path"), syncData);
             getPath(requestMap.get("Path"));
             authorizeRequest();
             if (requestMap.containsKey("Transfer-Encoding") && (requestMap.get("Transfer-Encoding")).equals("chunked")) {
@@ -119,7 +121,7 @@ public class HTTPRequestHandler implements RequestHandler {
                 responseHandler.apply(responseBytes, 0, true);
             }
         } catch (ResponseException e) {
-            String httpResponse = generateHeaders(e.getStatusCode(), e.getMessage());
+            String httpResponse = generateFullResponse(e.getStatusCode(), e.getStatusCode() + " " + e.getMessage(), e.getHasEmptyAuthentication());
             byte[] responseBytes = httpResponse.getBytes();
             responseHandler.apply(responseBytes, responseBytes.length, false);
             responseHandler.apply(responseBytes, 0, true);
@@ -304,6 +306,7 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private void checkIfLoad(String path, WorkersSyncData syncData) throws ResponseException{
+        System.out.println("here");
         if (path.equals("/load")) {
             if (syncData.isServerOverloaded()) {
                 throw new ResponseException("Overloaded", 503);
