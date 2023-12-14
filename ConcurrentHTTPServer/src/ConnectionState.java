@@ -3,5 +3,6 @@ public enum ConnectionState {
     READING,
     READ,
     WRITE,
-    WRITTEN
+    WRITTEN,
+    TRANSMITTED
 }

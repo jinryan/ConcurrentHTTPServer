@@ -6,17 +6,19 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Set;
 
 public class HTTPServerWorkerThread implements Runnable {
 
     private Selector selector;
-
     final WorkersSyncData syncData;
     private int numActiveConnections = 0;
-
     ServerConfigObject serverConfig;
+
+
+
 
     public HTTPServerWorkerThread(WorkersSyncData syncData, int workerID, ServerConfigObject serverConfig) {
         this.serverConfig = serverConfig;
@@ -33,25 +35,64 @@ public class HTTPServerWorkerThread implements Runnable {
     }
 
     private void generateResponse(ConnectionControlBlock ccb) {
-        ccb.getRequest();
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
-
         RequestHandler requestHandler = ccb.getRequestHandler();
         requestHandler.parseRequest();
+
+
+        /*
         String response = requestHandler.handleRequest(syncData);
 
 
 
         // Generate Response
+        System.out.print("Response: =====");
         for (int i = 0; i < response.length(); i++) {
             char ch = response.charAt(i);
             writeBuffer.put((byte) ch);
+            System.out.print((byte) ch);
         }
+        System.out.print("====Response ENDS");
 
 
         // Update state
         writeBuffer.flip();
         ccb.setConnectionState(ConnectionState.WRITE);
+
+        return;
+        */
+
+        ccb.setConnectionState(ConnectionState.WRITE);
+//        System.out.println(ccb.getConnectionState());
+
+
+
+        HTTPResponseHandler responseWriter = (byteBuffer, bytesRead, responseIsFinished) -> {
+            if (responseIsFinished) {
+                // Message is finish. Set selector state to written
+                writeBuffer.put((byte) '\r');
+                writeBuffer.put((byte) '\n');
+                writeBuffer.put((byte) '\r');
+                writeBuffer.put((byte) '\n');
+                writeBuffer.flip();
+                ccb.setConnectionState(ConnectionState.WRITTEN);
+            } else {
+                // Otherwise, write byte buffer
+
+                for (int i = 0; i < bytesRead; i++) {
+
+                    writeBuffer.put(byteBuffer[i]);
+                }
+                ccb.setConnectionState(ConnectionState.WRITE);
+            }
+
+        };
+
+        // Handle response
+
+        requestHandler.handleRequest(responseWriter);
+
+
     }
 
     private void closeSocket(SocketChannel socketChannel) {
@@ -90,12 +131,9 @@ public class HTTPServerWorkerThread implements Runnable {
 
     private void updateCCBOnWrite(int writeBytes, ConnectionControlBlock ccb) {
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
-        if (writeBytes == -1) {
-            ccb.setConnectionState(ConnectionState.WRITTEN);
-        } else {
-            if (writeBuffer.remaining() == 0) {
-                ccb.setConnectionState(ConnectionState.WRITTEN);
-            }
+//        System.out.println("Still need to write " + writeBuffer.array());
+        if ((writeBytes == -1 || writeBuffer.remaining() == 0) && ccb.getConnectionState() == ConnectionState.WRITTEN) {
+            ccb.setConnectionState(ConnectionState.TRANSMITTED);
         }
         ccb.updateConnectionState();
     }
@@ -186,21 +224,29 @@ public class HTTPServerWorkerThread implements Runnable {
                     // ==================== Write =================
                     if (key.isWritable()) {
                         // Should be in write state
+
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
-                        if (ccb.getConnectionState() != ConnectionState.WRITE) {
+                        if (ccb.getConnectionState() != ConnectionState.WRITE && ccb.getConnectionState() != ConnectionState.WRITTEN) {
                             continue;
                         }
 
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
+//                        System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
                         // When finish writing, close socket
-                        if (ccb.getConnectionState() == ConnectionState.WRITTEN) {
+                        if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
+                                client.socket().setKeepAlive(true);
+//                                System.out.println("Connection alive");
+
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());
                                 ccb.setConnectionState(ConnectionState.READING);
+
+                                HTTPRequestHandler newHttpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
+                                ccb.setRequestHandler(newHttpRequestHandler);
 
                             } else {
                                 closeSocket(client);

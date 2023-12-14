@@ -5,16 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="448a5469-806c-4a4f-a5cf-a6e266db483f" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/ConcurrentHTTPServer.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/javax_ws_rs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConcurrentHTTPServer/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ConcurrentHTTPServer/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ConcurrentHTTPServer/ConcurrentHTTPServer.iml" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/ConcurrentHTTPServer/src/HTTPResponseHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConcurrentHTTPServer/src/HTTPRequestHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ConcurrentHTTPServer/src/HTTPRequestHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ConcurrentHTTPServer/src/HTTPServerWorkerThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ConcurrentHTTPServer/src/HTTPServerWorkerThread.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ConcurrentHTTPServer/src/RequestHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ConcurrentHTTPServer/src/RequestHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Playground/Playground.iml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,21 +33,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/addisongoolsbee/Desktop/ConcurrentHTTPServer&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/ryanjin/Desktop/Yale/Fall 23/CPSC 434 Topics in Networked Systems/ConcurrentHTTPServer",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration default="true" type="JetRunConfigurationType">
       <module name="ConcurrentHTTPServer" />
@@ -79,6 +74,7 @@
       <workItem from="1698074276701" duration="735000" />
       <workItem from="1698075020826" duration="98000" />
       <workItem from="1698075159411" duration="72000" />
+      <workItem from="1702520565675" duration="1288000" />
     </task>
     <servers />
   </component>
