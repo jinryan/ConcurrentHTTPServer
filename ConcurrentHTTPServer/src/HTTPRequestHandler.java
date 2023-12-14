@@ -384,7 +384,7 @@ public class HTTPRequestHandler implements RequestHandler {
                 String encodedAuth = requestMap.get("Authorization").substring(requestMap.get("Authorization").indexOf(" ") + 1);
                 try {
                     byte[] decodedBytes = Base64.getDecoder().decode(encodedAuth);
-
+                    
                     String decodedString = new String(decodedBytes);
 
                     String[] parts = decodedString.split(":", 2); // Split into username and password
