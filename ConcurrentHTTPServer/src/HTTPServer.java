@@ -12,26 +12,24 @@ import java.util.TimerTask;
 public class HTTPServer {
 
     private final ArrayList<Integer> ports;
-    private static int numWorkers;
-    // private static int idealAveragePerWorker;
-    private static int numTotalConnections;
+    private int numWorkers;
+    private int numTotalConnections;
     private final ArrayList<ServerSocketChannel> serverChannels;
     private final ArrayList<Selector> selectors;
     private final Thread[] workers;
     Scanner inputReader;
     WorkersSyncData syncData;
     ServerConfigObject serverConfig;
-    public HTTPServer(int numWorkers, int idealAveragePerWorker, ServerConfigObject serverConfig) {
-        HTTPServer.numWorkers = serverConfig.getnSelectLoops();
-        // HTTPServer.idealAveragePerWorker = 8;
-        HTTPServer.numTotalConnections = numWorkers * idealAveragePerWorker;
+    public HTTPServer(int idealAveragePerWorker, ServerConfigObject serverConfig) {
+        this.numWorkers = serverConfig.getnSelectLoops();
+        this.numTotalConnections = numWorkers * idealAveragePerWorker;
         this.ports = serverConfig.getPorts();
         this.workers = new Thread[numWorkers];
         this.inputReader = new Scanner(System.in);
         this.serverConfig = serverConfig;
         this.serverChannels = new ArrayList<ServerSocketChannel>();
         this.selectors = new ArrayList<>();
-        syncData = new WorkersSyncData(numWorkers,0, numTotalConnections);
+        syncData = new WorkersSyncData(this.numWorkers,0, numTotalConnections);
     }
 
     private void openServerChannel() {
