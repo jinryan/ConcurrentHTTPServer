@@ -2,7 +2,7 @@ import java.nio.ByteBuffer;
 
 public class ConnectionControlBlock {
 
-    final int defaultBufferSize = 1024;
+    final int defaultBufferSize = 8192;
     private ByteBuffer readBuffer;
     private ByteBuffer writeBuffer;
     private StringBuffer request;
