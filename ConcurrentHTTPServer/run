@@ -1,0 +1,4 @@
+#! /bin/bash
+
+javac -d out src/*.java src/ConfigParser/*.java
+java -cp out Main

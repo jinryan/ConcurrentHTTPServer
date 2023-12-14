@@ -8,6 +8,7 @@ A robust HTTP 1.x server written in Java that allows for efficient handling of t
 
 - Build the project with `javac -d out src/*.java src/ConfigParser/*.java`, this will create a folder `out/` with the compiled code
 - Run the project with `java -cp out Main`
+- 
 - Test the server with something like `curl -i localhost:8080`
 - To specify a custom configuration file, add the argument `-config {file_path}`
 

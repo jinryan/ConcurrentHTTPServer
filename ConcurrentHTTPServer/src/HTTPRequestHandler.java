@@ -83,10 +83,8 @@ public class HTTPRequestHandler implements RequestHandler {
     // handle a request after having parsed it
 //    public String handleRequest(WorkersSyncData syncData) {
 //        try {
-//            System.out.println("honk");
 //            validateRequest();
 //
-//            System.out.println("here2");
 //            checkIfLoad(requestMap.get("Path"), syncData);
 //
 //            getPath(requestMap.get("Path"));
@@ -101,7 +99,6 @@ public class HTTPRequestHandler implements RequestHandler {
 //        }
 //    }
 
-    @Override
     public void handleRequest(HTTPResponseHandler responseHandler, WorkersSyncData syncData) {
         try {
             validateRequest();
@@ -306,7 +303,6 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private void checkIfLoad(String path, WorkersSyncData syncData) throws ResponseException{
-        System.out.println("here");
         if (path.equals("/load")) {
             if (syncData.isServerOverloaded()) {
                 throw new ResponseException("Overloaded", 503);

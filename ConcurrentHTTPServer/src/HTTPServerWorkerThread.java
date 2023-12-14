@@ -209,6 +209,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         SocketChannel client = (SocketChannel) key.channel();
 
                         int readBytes = client.read(ccb.getReadBuffer());
+                        System.out.println("Read " + readBytes + " bytes");
                         updateCCBOnRead(readBytes, ccb);
 
                         // If done reading, generate response
