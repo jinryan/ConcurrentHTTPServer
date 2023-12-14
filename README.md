@@ -53,8 +53,29 @@ curl -i -H "Accept: text/*" localhost:8080/folder/a.txt
 curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
 curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
 curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
-add post request
-add connection request
+
+Post Request:
+"POST /script.cgi HTTP/1.0" + CRLF
+		+ "Host: server2.com" + CRLF
+		+ "Accept: www/source" + CRLF
+		+ "Accept: text/html" + CRLF
+		+ "Accept: text/plain" + CRLF
+		+ "User-Agent: Lynx/2.4 libwww/2.14" + CRLF
+		+ "Content-type: application/x-www-form-urlencoded" + CRLF
+		+ "Transfer-Encoding: chunked" + CRLF
+		+ "Content-length: 30" + CRLF + CRLF
+		+ "q=Larry Bird&l=35&pass=testing";
+
+Keep Connection Alive Request:
+
+sentence = "GET / HTTP/1.1" + CRLF
+		+ "Host: server1.com" + CRLF
+		+ "Accept: text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8" + CRLF
+		+ "Accept-Language: en-US,en;q=0.5" + CRLF
+		+ "Cache-Control: no-cache" + CRLF
+		+ "Connection: keep-alive" + CRLF
+		+ "Authorization: Bearer myAccessToken123" + CRLF + CRLF;
+
 ```
 
 ## File Structure

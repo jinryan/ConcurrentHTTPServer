@@ -13,6 +13,7 @@ public class Main {
             configPath = "src/config.conf";
         }
         serverConfig = ApacheConfigParser.getServerConfigFrom(configPath);
+
         HTTPServer server = new HTTPServer(8, 8, serverConfig);
         server.start();
     }

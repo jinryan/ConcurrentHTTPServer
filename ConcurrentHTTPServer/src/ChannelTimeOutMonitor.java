@@ -21,7 +21,6 @@ public class ChannelTimeOutMonitor extends TimerTask {
                     // if the last time this selector read something was more than 3 seconds ago, close the channel
                     if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 3.0) {
                         try {
-                            System.out.println("Timeout. Close channel");
                             key.channel().close();
                             key.cancel();
                         } catch (IOException e) {
