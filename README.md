@@ -134,7 +134,9 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 
 ### Simple Benchmarking
 
-`ab -n 10000 -c 10  localhost:8080/folder/a.txt`
+Maximum throughput: 275 megabytes/sec
+
+`ab -n 10000 -c 10  localhost:8080/large.txt`
 
 Benchmarking localhost (be patient)
 Completed 1000 requests
@@ -149,41 +151,41 @@ Completed 9000 requests
 Completed 10000 requests
 Finished 10000 requests
 
-Server Software: Addison-Ryan
-Server Hostname: localhost
-Server Port: 8080
+Server Software:        Addison-Ryan
+Server Hostname:        localhost
+Server Port:            8080
 
-Document Path: /folder/a.txt
-Document Length: 21 bytes
+Document Path:          /large.txt
+Document Length:        148579 bytes
 
-Concurrency Level: 10
-Time taken for tests: 3.994 seconds
-Complete requests: 10000
-Failed requests: 0
-Total transferred: 2080000 bytes
-HTML transferred: 210000 bytes
-Requests per second: 2503.64 [#/sec] (mean)
-Time per request: 3.994 [ms] (mean)
-Time per request: 0.399 [ms] (mean, across all concurrent requests)
-Transfer rate: 508.55 [Kbytes/sec] received
+Concurrency Level:      10
+Time taken for tests:   5.274 seconds
+Complete requests:      10000
+Failed requests:        0
+Total transferred:      1487700000 bytes
+HTML transferred:       1485790000 bytes
+Requests per second:    1896.13 [#/sec] (mean)
+Time per request:       5.274 [ms] (mean)
+Time per request:       0.527 [ms] (mean, across all concurrent requests)
+Transfer rate:          275475.27 [Kbytes/sec] received
 
 Connection Times (ms)
-min mean[+/-sd] median max
-Connect: 0 1 1.1 1 27
-Processing: 0 2 1.6 2 30
-Waiting: 0 2 1.4 2 27
-Total: 1 4 1.9 3 33
+              min  mean[+/-sd] median   max
+Connect:        0    1   0.9      1      31
+Processing:     1    4   1.3      3      33
+Waiting:        1    3   1.4      2      32
+Total:          3    5   1.6      5      35
 
 Percentage of the requests served within a certain time (ms)
-50% 3
-66% 4
-75% 4
-80% 5
-90% 5
-95% 6
-98% 7
-99% 9
-100% 33 (longest request)
+  50%      5
+  66%      5
+  75%      5
+  80%      5
+  90%      6
+  95%      6
+  98%      8
+  99%     12
+ 100%     35 (longest request)
 
 ## NGINX Comparisons
 
