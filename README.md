@@ -35,25 +35,27 @@ The basic structure of a virtual host is as follows:
 
 These will work if you use the default configuration file, used automatically if no configuration file is specified
 
-- curl -i localhost:8080
-- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
-- curl -i -H "Authorization: Basic something" localhost:8080
-- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder
-- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/ubapusdf
-- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/test.txt
-- curl -i localhost:8080/folder/a.txt
-- curl -i -H "User-Agent: iPhone" -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
-- curl -i -H "Host: server1.com" localhost:8080
-- curl -i -H "Host: server2.com" localhost:8080
-- curl -i -H "Host: server3.com" localhost:8080
-- curl -i -H "Accept: image/png, image/jpeg" localhost:8080/folder/a.txt
-- curl -i -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/a.txt
-- curl -i -H "Accept: text/*" localhost:8080/folder/a.txt
-- curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
-- curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
-- curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
-- add post request
-- add connection request
+```bash
+curl -i localhost:8080
+curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
+curl -i -H "Authorization: Basic something" localhost:8080
+curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder
+curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/ubapusdf
+curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/test.txt
+curl -i localhost:8080/folder/a.txt
+curl -i -H "User-Agent: iPhone" -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
+curl -i -H "Host: server1.com" localhost:8080
+curl -i -H "Host: server2.com" localhost:8080
+curl -i -H "Host: server3.com" localhost:8080
+curl -i -H "Accept: image/png, image/jpeg" localhost:8080/folder/a.txt
+curl -i -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/a.txt
+curl -i -H "Accept: text/*" localhost:8080/folder/a.txt
+curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
+curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
+curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
+add post request
+add connection request
+```
 
 ## File Structure
 
@@ -108,6 +110,64 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 - `Content-Length`: the length in bytes of the response body (excluding headers)
 - `Transfer-Encoding`: a conditional header which appears in the case of a POST request. The server uses CGI and the response is in a chunked transfer encoded format
 - **Response Body**: the response body begins with a double carriage line return feed, and contains the requested resource, as specified in `Content-Type` and `Content-Length`
+
+### Simple Benchmarking
+
+`ab -n 10000 -c 10  localhost:8080/folder/a.txt`
+
+This is ApacheBench, Version 2.3 <$Revision: 1903618 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking localhost (be patient)
+Completed 1000 requests
+Completed 2000 requests
+Completed 3000 requests
+Completed 4000 requests
+Completed 5000 requests
+Completed 6000 requests
+Completed 7000 requests
+Completed 8000 requests
+Completed 9000 requests
+Completed 10000 requests
+Finished 10000 requests
+
+
+Server Software:        Addison-Ryan
+Server Hostname:        localhost
+Server Port:            8080
+
+Document Path:          /folder/a.txt
+Document Length:        21 bytes
+
+Concurrency Level:      10
+Time taken for tests:   3.994 seconds
+Complete requests:      10000
+Failed requests:        0
+Total transferred:      2080000 bytes
+HTML transferred:       210000 bytes
+Requests per second:    2503.64 [#/sec] (mean)
+Time per request:       3.994 [ms] (mean)
+Time per request:       0.399 [ms] (mean, across all concurrent requests)
+Transfer rate:          508.55 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   1.1      1      27
+Processing:     0    2   1.6      2      30
+Waiting:        0    2   1.4      2      27
+Total:          1    4   1.9      3      33
+
+Percentage of the requests served within a certain time (ms)
+  50%      3
+  66%      4
+  75%      4
+  80%      5
+  90%      5
+  95%      6
+  98%      7
+  99%      9
+ 100%     33 (longest request)
 
 ## NGINX Comparisons
 
