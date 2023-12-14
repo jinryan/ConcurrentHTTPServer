@@ -3,7 +3,6 @@ import ConfigParser.ServerConfigObject;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -209,7 +208,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         SocketChannel client = (SocketChannel) key.channel();
 
                         int readBytes = client.read(ccb.getReadBuffer());
-                        System.out.println("Read " + readBytes + " bytes");
+                        // System.out.println("Read " + readBytes + " bytes");
                         updateCCBOnRead(readBytes, ccb);
 
                         // If done reading, generate response

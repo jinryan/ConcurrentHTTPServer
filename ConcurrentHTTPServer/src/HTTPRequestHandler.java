@@ -14,8 +14,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import javax.management.RuntimeErrorException;
-
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -201,40 +199,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // Write finish
         responseHandler.apply(null, 0, true);
-    }
-
-    private String generateHeaders(int statusCode, String responseBody) {
-        boolean missingPassword = false;
-        String CRLF = "\r\n";
-        String res = "";
-
-        // First response line
-        res += requestMap.get("Version") + " " + statusCode + " " + statusCodeMessages.get(statusCode) + CRLF;
-
-        // Date
-        res += "Date: " + getCurrentDate() + CRLF;
-
-        // Server
-        res += "Server: Addison-Ryan Server Java/1.21" + CRLF;
-
-        // Last-Modified
-        res += "Last-Modified: " + lastModifiedDate + CRLF;
-
-        // Optional WWW-Authenticate
-        if ((statusCode == 401) && (responseBody.charAt(0) == '~')) {
-            res += "WWW-Authenticate: Basic Realm=" + responseBody.substring(1) + CRLF;
-            missingPassword = true;
-        }
-
-        // Content-Type
-        res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
-
-        // Content-Length
-        res += "Content-Length: " + (missingPassword ? 0 : responseBody.getBytes().length) + CRLF + CRLF;
-
-        res += (missingPassword ? "" : responseBody);
-
-        return res;
     }
 
     private byte[] generateChunkedHeaders(int statusCode) {
