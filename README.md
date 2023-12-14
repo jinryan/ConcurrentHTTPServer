@@ -52,6 +52,8 @@ These will work if you use the default configuration file, used automatically if
 - curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
 - curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
 - curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
+- add post request
+- add connection request
 
 ## File Structure
 
