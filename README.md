@@ -37,22 +37,23 @@ These will work if you use the default configuration file, used automatically if
 
 ```bash
 curl -i localhost:8080
-curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
-curl -i -H "Authorization: Basic something" localhost:8080
-curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder
-curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/ubapusdf
-curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/test.txt
+curl -i localhost:8080/small.txt
+curl -i localhost:8080/apsodfunasdf
+curl -i localhost:8080/folder
 curl -i localhost:8080/folder/a.txt
-curl -i -H "User-Agent: iPhone" -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
+curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder/a.txt
+curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2t" localhost:8080/folder/a.txt
+curl -i addison:ryan_sucks@localhost:8080/folder/a.txt
+curl -i -H "User-Agent: iPhone" localhost:8080
 curl -i -H "Host: server1.com" localhost:8080
 curl -i -H "Host: server2.com" localhost:8080
 curl -i -H "Host: server3.com" localhost:8080
-curl -i -H "Accept: image/png, image/jpeg" localhost:8080/folder/a.txt
-curl -i -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/a.txt
-curl -i -H "Accept: text/*" localhost:8080/folder/a.txt
-curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
-curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
-curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
+curl -i -H "Accept: image/png, image/jpeg" localhost:8080/folder/test.txt
+curl -i -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/test.txt
+curl -i -H "Accept: text/*" localhost:8080/test.txt
+curl -i -H "Accept: text/html" localhost:8080/test.txt
+curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080
+curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080
 
 Post Request:
 "POST /script.cgi HTTP/1.0" + CRLF
