@@ -6,11 +6,10 @@ A robust HTTP 1.x server written in Java that allows for efficient handling of t
 
 ## Usage
 
-- Build the project with `javac -d out src/*.java src/ConfigParser/*.java`, this will create a folder `out/` with the compiled code
-- Run the project with `java -cp out Main`
-- 
+- Run the program using the `run` script while within the ConcurrentHTTPServer/ConcurrentHTTPServer directory:
+  - To run the default configuration file, use `run`
+  - To specify a custom configuration file, add the file path as an argument: `run -config {config_file_path}`
 - Test the server with something like `curl -i localhost:8080`
-- To specify a custom configuration file, add the argument `-config {file_path}`
 
 ### Configuration File
 
@@ -57,25 +56,25 @@ curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/fol
 
 Post Request:
 "POST /script.cgi HTTP/1.0" + CRLF
-		+ "Host: server2.com" + CRLF
-		+ "Accept: www/source" + CRLF
-		+ "Accept: text/html" + CRLF
-		+ "Accept: text/plain" + CRLF
-		+ "User-Agent: Lynx/2.4 libwww/2.14" + CRLF
-		+ "Content-type: application/x-www-form-urlencoded" + CRLF
-		+ "Transfer-Encoding: chunked" + CRLF
-		+ "Content-length: 30" + CRLF + CRLF
-		+ "q=Larry Bird&l=35&pass=testing";
+  + "Host: server2.com" + CRLF
+  + "Accept: www/source" + CRLF
+  + "Accept: text/html" + CRLF
+  + "Accept: text/plain" + CRLF
+  + "User-Agent: Lynx/2.4 libwww/2.14" + CRLF
+  + "Content-type: application/x-www-form-urlencoded" + CRLF
+  + "Transfer-Encoding: chunked" + CRLF
+  + "Content-length: 30" + CRLF + CRLF
+  + "q=Larry Bird&l=35&pass=testing";
 
 Keep Connection Alive Request:
 
 sentence = "GET / HTTP/1.1" + CRLF
-		+ "Host: server1.com" + CRLF
-		+ "Accept: text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8" + CRLF
-		+ "Accept-Language: en-US,en;q=0.5" + CRLF
-		+ "Cache-Control: no-cache" + CRLF
-		+ "Connection: keep-alive" + CRLF
-		+ "Authorization: Bearer myAccessToken123" + CRLF + CRLF;
+  + "Host: server1.com" + CRLF
+  + "Accept: text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8" + CRLF
+  + "Accept-Language: en-US,en;q=0.5" + CRLF
+  + "Cache-Control: no-cache" + CRLF
+  + "Connection: keep-alive" + CRLF
+  + "Authorization: Bearer myAccessToken123" + CRLF + CRLF;
 
 ```
 
@@ -136,10 +135,6 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 ### Simple Benchmarking
 
 `ab -n 10000 -c 10  localhost:8080/folder/a.txt`
-
-This is ApacheBench, Version 2.3 <$Revision: 1903618 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
 
 Benchmarking localhost (be patient)
 Completed 1000 requests

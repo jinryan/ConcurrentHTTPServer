@@ -1,4 +1,14 @@
 #! /bin/bash
 
 javac -d out src/*.java src/ConfigParser/*.java
-java -cp out Main
+
+if [ "$1" == "-config" ] && [ -n "$2" ]; then
+    if [ -f "$2" ]; then
+        echo "Running custom config file $2"
+        java -cp out Main -config "$2"
+    else
+        echo "Config file $2 does not exist."
+    fi
+else
+    java -cp out Main
+fi
