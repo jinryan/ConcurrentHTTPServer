@@ -31,6 +31,28 @@ The basic structure of a virtual host is as follows:
 </VirtualHost>
 ```
 
+### Example Requests
+
+These will work if you use the default configuration file, used automatically if no configuration file is specified
+
+- curl -i localhost:8080
+- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
+- curl -i -H "Authorization: Basic something" localhost:8080
+- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder
+- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/ubapusdf
+- curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/test.txt
+- curl -i localhost:8080/folder/a.txt
+- curl -i -H "User-Agent: iPhone" -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080
+- curl -i -H "Host: server1.com" localhost:8080
+- curl -i -H "Host: server2.com" localhost:8080
+- curl -i -H "Host: server3.com" localhost:8080
+- curl -i -H "Accept: image/png, image/jpeg" localhost:8080/folder/a.txt
+- curl -i -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/a.txt
+- curl -i -H "Accept: text/*" localhost:8080/folder/a.txt
+- curl -i -H "Accept: text/html" localhost:8080/folder/a.txt
+- curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080/folder/a.txt
+- curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080/folder/a.txt
+
 ## File Structure
 
 All code is within `src/`, there are 4 important files:
