@@ -115,9 +115,12 @@ public class HTTPServerWorkerThread implements Runnable {
     }
     public void run() {
 //        System.out.println("Worker #" + workerID + " listening");
+        boolean processing = false;
         while (serverIsRunning()) {
             try {
+                System.out.println("one");
                 selector.select(); // Blocking operation, returns only after a channel is selected
+                System.out.println("two");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -161,6 +164,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         // Attach to key
                         clientKey.attach(ccb);
+                        processing = true;
                     }
 
                     // ==================== Read =================
@@ -202,7 +206,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
-                            
+                            processing = false;
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);

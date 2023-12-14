@@ -79,11 +79,14 @@ public class HTTPServer {
         syncData.setServerRun(false);
         for (int i = 0; i < numWorkers; i++) {
             try {
+                System.out.print("help me? " + i);
                 workers[i].join();
+                System.out.print("help me 2? " + i);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
+        System.exit(0);
     }
 
     private void monitorKeyboardInput() {
