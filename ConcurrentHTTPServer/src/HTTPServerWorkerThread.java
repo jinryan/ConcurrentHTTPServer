@@ -13,6 +13,7 @@ public class HTTPServerWorkerThread implements Runnable {
     final WorkersSyncData syncData;
     private int numActiveConnections = 0;
     ServerConfigObject serverConfig;
+    private int workerID;
 
 
 
@@ -20,6 +21,7 @@ public class HTTPServerWorkerThread implements Runnable {
     public HTTPServerWorkerThread(WorkersSyncData syncData, int workerID, ServerConfigObject serverConfig) {
         this.serverConfig = serverConfig;
         this.syncData = syncData;
+        this.workerID = workerID;
         try {
             selector = Selector.open();
         } catch (IOException e) {
@@ -123,9 +125,7 @@ public class HTTPServerWorkerThread implements Runnable {
         boolean processing = false;
         while (serverIsRunning()) {
             try {
-                System.out.println("one");
                 selector.select(); // Blocking operation, returns only after a channel is selected
-                System.out.println("two");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -145,13 +145,14 @@ public class HTTPServerWorkerThread implements Runnable {
                         // Get channel
                         ServerSocketChannel server = (ServerSocketChannel) key.channel();
                         SocketChannel client = server.accept();
+                        
                         if (client == null) {
                             continue;
                         }
 
                         numActiveConnections++;
                         syncData.addConnection();
-//                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
+                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 
                         // Register selector
@@ -215,7 +216,7 @@ public class HTTPServerWorkerThread implements Runnable {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);
-                                   System.out.println("Connection alive");
+                                System.out.println("Connection alive");
 
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());
@@ -223,24 +224,27 @@ public class HTTPServerWorkerThread implements Runnable {
 
                                 HTTPRequestHandler newHttpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
                                 ccb.setRequestHandler(newHttpRequestHandler);
-                                key.cancel();
-                                readyKeys.remove(key);
+
+                                key.interestOps(SelectionKey.OP_READ);
+
+                                // key.cancel();
+                                // readyKeys.remove(key);
 
                                 
-                                // key = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                                // // key = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
-                                // Create CCB
-                                ccb = new ConnectionControlBlock();
-                                ccb.setConnectionState(ConnectionState.READING);
-                                ccb.setLastReadTime(System.currentTimeMillis());
+                                // // Create CCB
+                                // ccb = new ConnectionControlBlock();
+                                // ccb.setConnectionState(ConnectionState.READING);
+                                // ccb.setLastReadTime(System.currentTimeMillis());
 
-                                // Set HTTP Request Handler
-                                HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
-                                ccb.setRequestHandler(httpRequestHandler);
+                                // // Set HTTP Request Handler
+                                // HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
+                                // ccb.setRequestHandler(httpRequestHandler);
 
 
-                                // Attach to key
-                                key.attach(ccb);
+                                // // Attach to key
+                                // key.attach(ccb);
 
                             } else {
                                 closeSocket(client);
