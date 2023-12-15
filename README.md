@@ -7,8 +7,8 @@ A robust HTTP 1.x server written in Java that allows for efficient handling of t
 ## Usage
 
 - Run the program using the `run` script while within the ConcurrentHTTPServer/ConcurrentHTTPServer directory:
-  - To run the default configuration file, use `run`
-  - To specify a custom configuration file, add the file path as an argument: `run -config {config_file_path}`
+  - To run the default configuration file, use `./run`
+  - To specify a custom configuration file, add the file path as an argument: `./run -config {config_file_path}`
 - Test the server with something like `curl -i localhost:8080`
 
 ### Configuration File

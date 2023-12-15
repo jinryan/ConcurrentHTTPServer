@@ -84,6 +84,7 @@ public class HTTPServer {
                 throw new RuntimeException(e);
             }
         }
+        System.exit(0);
     }
 
     private void monitorKeyboardInput() {
