@@ -57,7 +57,7 @@ public class HTTPServerWorkerThread implements Runnable {
                 String responseContent = new String(byteBuffer, StandardCharsets.UTF_8);
                 // System.out.println("====== RESPONSE BEGINS ========");
                 // System.out.println(responseContent);
-                // System.out.println("====== RESPONSE BEGINS ========");
+                // System.out.println("====== RESPONSE ENDS ========");
             }
         };
 
@@ -202,7 +202,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
-                        System.out.println("Wrote " + writeBytes + " bytes");
+                        // System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
 
                         // When finish writing, close socket
@@ -210,8 +210,8 @@ public class HTTPServerWorkerThread implements Runnable {
                             
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
-                                client.socket().setKeepAlive(true);
-                                   System.out.println("Connection alive");
+                                // client.socket().setKeepAlive(true);
+                                // System.out.println("Connection alive");
 
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());
@@ -226,17 +226,17 @@ public class HTTPServerWorkerThread implements Runnable {
                                 // key = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
                                 // Create CCB
-                                ccb = new ConnectionControlBlock();
-                                ccb.setConnectionState(ConnectionState.READING);
-                                ccb.setLastReadTime(System.currentTimeMillis());
+                                // ccb = new ConnectionControlBlock();
+                                // ccb.setConnectionState(ConnectionState.READING);
+                                // ccb.setLastReadTime(System.currentTimeMillis());
 
-                                // Set HTTP Request Handler
-                                HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
-                                ccb.setRequestHandler(httpRequestHandler);
+                                // // Set HTTP Request Handler
+                                // HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
+                                // ccb.setRequestHandler(httpRequestHandler);
 
 
-                                // Attach to key
-                                key.attach(ccb);
+                                // // Attach to key
+                                // key.attach(ccb);
 
                             } else {
                                 closeSocket(client);
