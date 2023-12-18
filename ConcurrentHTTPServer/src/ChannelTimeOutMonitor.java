@@ -20,7 +20,7 @@ public class ChannelTimeOutMonitor extends TimerTask {
                 if (key.attachment() != null) {
                     ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                     // System.out.println(key);
-                    // System.out.println(ccb.getConnectionState());
+                    System.out.println(ccb.getConnectionState());
                     System.out.println(ccb.getLastReadTime());
                     long curr = System.currentTimeMillis();
                     // if the last time this selector read something was more than 3 seconds ago, close the channel

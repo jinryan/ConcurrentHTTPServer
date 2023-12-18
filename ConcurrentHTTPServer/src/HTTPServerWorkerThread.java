@@ -185,7 +185,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         SocketChannel client = (SocketChannel) key.channel();
 
                         int readBytes = client.read(ccb.getReadBuffer());
-                        if (readBytes == -1) {
+                        if (readBytes == -1 && ccb.getReadBuffer().position() == 0) {
                             closeSocket(client);
                         } else if (readBytes != 0) {
                             updateCCBOnRead(readBytes, ccb);
