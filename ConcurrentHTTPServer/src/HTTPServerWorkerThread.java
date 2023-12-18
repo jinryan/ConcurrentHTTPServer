@@ -132,10 +132,10 @@ public class HTTPServerWorkerThread implements Runnable {
             Set<SelectionKey> readyKeys = selector.selectedKeys();
             Iterator<SelectionKey> iterator = readyKeys.iterator();
             while (iterator.hasNext()) {
+                // System.out.print("x");
                 SelectionKey key = iterator.next();
                 iterator.remove();
                 try {
-
                     // ==================== Accept =================
                     if (key.isAcceptable()) {
                         // Basic load balancing
@@ -204,13 +204,21 @@ public class HTTPServerWorkerThread implements Runnable {
                         // Should be in write state
 
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
-                        if (ccb.getConnectionState() != ConnectionState.WRITE && ccb.getConnectionState() != ConnectionState.WRITTEN) {
+                        
+
+                        if (ccb.getConnectionState() != ConnectionState.WRITE && ccb.getConnectionState() != ConnectionState.WRITTEN && ccb.getConnectionState() != ConnectionState.TRANSMITTED) {
                             continue;
                         }
 
                         SocketChannel client = (SocketChannel) key.channel();
+                        if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
+                                ccb.resetState();
+                                closeSocket(client);
+                                continue;
+                        }
+
                         int writeBytes = client.write(ccb.getWriteBuffer());
-                        // System.out.println("Wrote " + writeBytes + " bytes");
+                        System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
 
                         // When finish writing, close socket
@@ -218,6 +226,7 @@ public class HTTPServerWorkerThread implements Runnable {
                             processing = false;
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
+                                // System.out.println("Keep alive");
                                 client.socket().setKeepAlive(true);
 
                                 ccb.resetState();
@@ -229,35 +238,9 @@ public class HTTPServerWorkerThread implements Runnable {
 
                                 key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
-                                // key.cancel();
-                                // readyKeys.remove(key);
-
-                                
-                                // // key = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-
-                                // Create CCB
-                                // ccb = new ConnectionControlBlock();
-                                // ccb.setConnectionState(ConnectionState.READING);
-                                // ccb.setLastReadTime(System.currentTimeMillis());
-                                // // Create CCB
-                                // ccb = new ConnectionControlBlock();
-                                // ccb.setConnectionState(ConnectionState.READING);
-                                // ccb.setLastReadTime(System.currentTimeMillis());
-
-                                // // Set HTTP Request Handler
-                                // HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
-                                // ccb.setRequestHandler(httpRequestHandler);
-                                // // Set HTTP Request Handler
-                                // HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
-                                // ccb.setRequestHandler(httpRequestHandler);
-
-
-                                // // Attach to key
-                                // key.attach(ccb);
-                                // // Attach to key
-                                // key.attach(ccb);
-
                             } else {
+                                // System.out.println("Close socket");
+                                ccb.resetState();
                                 closeSocket(client);
                             }
 

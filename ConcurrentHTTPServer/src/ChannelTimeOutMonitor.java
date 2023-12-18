@@ -7,6 +7,7 @@ import java.util.TimerTask;
 public class ChannelTimeOutMonitor extends TimerTask {
     private final ArrayList<Selector> selectors;
     private WorkersSyncData syncData;
+    private int timeoutCheck = 1;
 
     public ChannelTimeOutMonitor(ArrayList<Selector> selectors, WorkersSyncData syncData) {
         this.syncData = syncData;
@@ -15,6 +16,8 @@ public class ChannelTimeOutMonitor extends TimerTask {
 
     @Override
     public void run() {
+        // System.out.println("\nCheck for timeout " + timeoutCheck);
+        timeoutCheck++;
         for (Selector selector : selectors) {
             for (SelectionKey key : selector.keys()) {
                 if (key.attachment() != null) {
@@ -22,14 +25,18 @@ public class ChannelTimeOutMonitor extends TimerTask {
                     long curr = System.currentTimeMillis();
                     // if the last time this selector read something was more than 3 seconds ago, close the channel
                     if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 3.0) {
-                        System.out.println("Connection timed out");
-                        try {
-                            syncData.dropConnection();
-                            key.channel().close();
-                            key.cancel();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        // System.out.println("Connection timed out");
+                        // syncData.dropConnection();
+                        ccb.setConnectionState(ConnectionState.TRANSMITTED);
+                        // try {
+                        //     syncData.dropConnection();
+                        //     ccb.setConnectionState(ConnectionState.WRITTEN);
+                        //     // key.channel().close();
+                        //     // key.cancel();
+                        //     // selector.selectedKeys().remove(key);
+                        // } catch (IOException e) {
+                        //     throw new RuntimeException(e);
+                        // }
                     }
                 }
 
