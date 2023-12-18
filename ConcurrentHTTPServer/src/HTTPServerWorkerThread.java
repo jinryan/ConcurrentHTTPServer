@@ -111,7 +111,8 @@ public class HTTPServerWorkerThread implements Runnable {
         }
     }
     public void run() {
-        while (serverIsRunning()) {
+        
+        while (serverIsRunning() || syncData.getNumConnections() > 0) {
             try {
                 selector.select(); // Blocking operation, returns only after a channel is selected
             } catch (IOException e) {
@@ -140,7 +141,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         numActiveConnections++;
                         syncData.addConnection();
-                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
+                        // System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 
                         SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);

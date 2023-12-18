@@ -24,7 +24,7 @@ public class ChannelTimeOutMonitor extends TimerTask {
                     ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                     long curr = System.currentTimeMillis();
                     // if the last time this selector read something was more than 3 seconds ago, close the channel
-                    if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 3.0) {
+                    if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 10.0) {
                         // System.out.println("Connection timed out");
                         // syncData.dropConnection();
                         ccb.setConnectionState(ConnectionState.TRANSMITTED);
