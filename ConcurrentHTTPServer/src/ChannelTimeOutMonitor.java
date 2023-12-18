@@ -1,4 +1,3 @@
-import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.ArrayList;
@@ -6,10 +5,8 @@ import java.util.TimerTask;
 
 public class ChannelTimeOutMonitor extends TimerTask {
     private final ArrayList<Selector> selectors;
-    private WorkersSyncData syncData;
 
-    public ChannelTimeOutMonitor(ArrayList<Selector> selectors, WorkersSyncData syncData) {
-        this.syncData = syncData;
+    public ChannelTimeOutMonitor(ArrayList<Selector> selectors) {
         this.selectors = selectors;
     }
 
@@ -23,13 +20,7 @@ public class ChannelTimeOutMonitor extends TimerTask {
                     // if the last time this selector read something was more than 3 seconds ago, close the channel
                     if (ccb.getConnectionState() == ConnectionState.READING && (double) (curr - ccb.getLastReadTime()) / 1000 > 3.0) {
                         System.out.println("Connection timed out");
-                        try {
-                            syncData.dropConnection();
-                            key.channel().close();
-                            key.cancel();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        ccb.setConnectionState(ConnectionState.WRITTEN);
                     }
                 }
 
