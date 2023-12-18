@@ -27,6 +27,7 @@ public class HTTPRequestHandler implements RequestHandler {
     private final char[] lastFour = {0, 0, 0, 0};
     private int i;
     private int expectedContentFromBody;
+    private boolean chunkEncodedBody = false;
     private boolean readingBody = false;
     public boolean isRequestBroken = false;
 
@@ -103,7 +104,6 @@ public class HTTPRequestHandler implements RequestHandler {
                 processChunkedRequest(responseHandler);
             } else {
                 // Non-chunk encoding
-                // System.out.println("c");
                 byte[] httpResponse = processRequest();
                 assert httpResponse != null;
 
@@ -133,6 +133,7 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private void processPOSTChunked(HTTPResponseHandler responseHandler) throws IOException, ResponseException {
+
         int port = socketChannel.socket().getLocalPort();
         lastModifiedDate = getCurrentDate();
 
@@ -147,6 +148,7 @@ public class HTTPRequestHandler implements RequestHandler {
         }
 
         String queryString = requestMap.get("Body");
+        
         runCGIProgramChunked(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST", responseHandler);
     }
 
@@ -157,14 +159,20 @@ public class HTTPRequestHandler implements RequestHandler {
 
     public void runCGIProgramChunked(String programPath, String queryString, String remotePort, String serverPort, String method, HTTPResponseHandler responseHandler) throws IOException {
         String perlInterpreter = "perl";
+
         ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
         processBuilder.environment().put("QUERY_STRING", queryString);
         processBuilder.environment().put("REMOTE_*", remotePort);
         processBuilder.environment().put("SERVER_*", serverPort);
         processBuilder.environment().put("REQUEST_METHOD", method);
 
+        processBuilder.redirectInput(ProcessBuilder.Redirect.PIPE);
 
         Process process = processBuilder.start();
+        process.getOutputStream().write(queryString.getBytes());
+        process.getOutputStream().close();
+
+        
         InputStream inputStream = process.getInputStream();
 
         byte[] buffer = new byte[1024];
@@ -173,24 +181,31 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // Write header
         responseHandler.apply(chunkedHeader, chunkedHeader.length, false);
-
-
-
+        
         // Write body
         while ((bytesRead = inputStream.read(buffer)) != -1) {
+            // System.out.println("CGI Generating Chunk ===\n" + returnInfo + "\n=== of length " + returnInfo.length());
 
             // Num bytes to follow
-            byte[] chunkComponentHeader = String.valueOf(bytesRead).getBytes();
-            responseHandler.apply(chunkComponentHeader, String.valueOf(bytesRead).length(), false);
+            String chunkSize = Integer.toHexString(bytesRead);
 
+            byte[] chunkComponentHeader = chunkSize.getBytes();
+            responseHandler.apply(chunkComponentHeader, chunkComponentHeader.length, false);
             responseHandler.apply(CRLFBytes(), 2, false);
 
             responseHandler.apply(buffer, bytesRead, false);
             responseHandler.apply(CRLFBytes(), 2, false);
+
         }
 
+        // End body
+
+        String zero = "0";
+        byte[] zeroB = zero.getBytes();
+        responseHandler.apply(zeroB, zeroB.length, false);
         // Write finish
         responseHandler.apply(null, 0, true);
+         
     }
 
     private byte[] generateChunkedHeaders(int statusCode) {
@@ -229,6 +244,8 @@ public class HTTPRequestHandler implements RequestHandler {
     public boolean requestCompleted() {
         if (readingBody && expectedContentFromBody == 0) {
             return true;
+        } else if (chunkEncodedBody) {
+            return request.endsWith("0\r\n\r\n");
         } else if (!readingBody
                 && i > 3
                 && lastFour[(i-1) % 4] == '\n'
@@ -240,6 +257,8 @@ public class HTTPRequestHandler implements RequestHandler {
                 expectedContentFromBody = Integer.parseInt(requestMap.get("Content-Length"));
                 // System.out.println("Expecting " + expectedContentFromBody + " of content");
                 readingBody = true;
+            } else if (requestMap.containsKey("Transfer-Encoding") && requestMap.get("Transfer-Encoding").equals("chunked")) {
+                chunkEncodedBody = true;
             } else {
                 return true;
             }
@@ -537,7 +556,6 @@ public class HTTPRequestHandler implements RequestHandler {
     }
 
     private String runCGIProgram(String programPath, String queryString, String remotePort, String serverPort, String method) throws IOException {
-        System.out.println("1");
         String perlInterpreter = "perl";
         ProcessBuilder processBuilder = new ProcessBuilder(perlInterpreter, programPath);
         processBuilder.environment().put("QUERY_STRING", queryString);
@@ -545,19 +563,24 @@ public class HTTPRequestHandler implements RequestHandler {
         processBuilder.environment().put("SERVER_*", serverPort);
         processBuilder.environment().put("REQUEST_METHOD", method);
 
+        processBuilder.redirectInput(ProcessBuilder.Redirect.PIPE);
+
         Process process = processBuilder.start();
+        process.getOutputStream().write(queryString.getBytes());
+        process.getOutputStream().close();
+        
+        
         InputStream inputStream = process.getInputStream();
 
         byte[] buffer = new byte[1024];
         int bytesRead;
         StringBuilder output = new StringBuilder();
 
-        System.out.println("2");
 
         while ((bytesRead = inputStream.read(buffer)) != -1) {
             output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
         }
-        System.out.println("Point 1 has " + output.length() + " bytes ");
+        // System.out.println("Point 1 has " + output.length() + " bytes ");
         return output.toString();
     }
 

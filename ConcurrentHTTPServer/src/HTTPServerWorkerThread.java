@@ -51,7 +51,7 @@ public class HTTPServerWorkerThread implements Runnable {
                 ccb.setConnectionState(ConnectionState.WRITTEN);
             } else {
                 // Otherwise, write byte buffer
-                // System.out.println("Point 2 Supposed to write " + bytesRead + " bytes");
+                
                 for (int i = 0; i < bytesRead; i++) {
                     writeBuffer.put(byteBuffer[i]);
                 }
@@ -59,7 +59,7 @@ public class HTTPServerWorkerThread implements Runnable {
                 String responseContent = new String(byteBuffer, StandardCharsets.UTF_8);
                 // System.out.println("====== RESPONSE BEGINS ========");
                 // System.out.println(responseContent);
-                // System.out.println("====== RESPONSE BEGINS ========");
+                // System.out.println("====== RESPONSE ENDS ========");
             }
         };
 
@@ -210,7 +210,7 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         SocketChannel client = (SocketChannel) key.channel();
                         int writeBytes = client.write(ccb.getWriteBuffer());
-                        System.out.println("Wrote " + writeBytes + " bytes");
+                        // System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
 
                         // When finish writing, close socket
@@ -235,6 +235,10 @@ public class HTTPServerWorkerThread implements Runnable {
                                 
                                 // // key = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
+                                // Create CCB
+                                // ccb = new ConnectionControlBlock();
+                                // ccb.setConnectionState(ConnectionState.READING);
+                                // ccb.setLastReadTime(System.currentTimeMillis());
                                 // // Create CCB
                                 // ccb = new ConnectionControlBlock();
                                 // ccb.setConnectionState(ConnectionState.READING);
@@ -243,8 +247,13 @@ public class HTTPServerWorkerThread implements Runnable {
                                 // // Set HTTP Request Handler
                                 // HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
                                 // ccb.setRequestHandler(httpRequestHandler);
+                                // // Set HTTP Request Handler
+                                // HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
+                                // ccb.setRequestHandler(httpRequestHandler);
 
 
+                                // // Attach to key
+                                // key.attach(ccb);
                                 // // Attach to key
                                 // key.attach(ccb);
 
