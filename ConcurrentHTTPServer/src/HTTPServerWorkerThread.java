@@ -185,8 +185,11 @@ public class HTTPServerWorkerThread implements Runnable {
                         SocketChannel client = (SocketChannel) key.channel();
 
                         int readBytes = client.read(ccb.getReadBuffer());
-                        updateCCBOnRead(readBytes, ccb);
-                        // System.out.println("Read " + readBytes + " bytes");
+                        if (readBytes == -1) {
+                            closeSocket(client);
+                        } else if (readBytes != 0) {
+                            updateCCBOnRead(readBytes, ccb);
+                        }
 
                         // If done reading, generate response
                         if (ccb.getConnectionState() == ConnectionState.READ) {
@@ -197,7 +200,7 @@ public class HTTPServerWorkerThread implements Runnable {
                     }
 
                     // ==================== Write =================
-                    if (key.isWritable()) {
+                    if (key.isValid() && key.isWritable()) {
                         // Should be in write state
 
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
@@ -216,7 +219,6 @@ public class HTTPServerWorkerThread implements Runnable {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 client.socket().setKeepAlive(true);
-                                System.out.println("Connection alive");
 
                                 ccb.resetState();
                                 ccb.setLastReadTime(System.currentTimeMillis());

@@ -583,11 +583,15 @@ public class HTTPRequestHandler implements RequestHandler {
             res += "WWW-Authenticate: Basic Realm=" + responseBodyStr.substring(1) + CRLF;
         }
 
+        if (requestMap.containsKey("Connection") && requestMap.get("Connection").equals("keep-alive")) {
+            res += "Connection: keep-alive" + CRLF;
+        }
+
         // Content-Type
         res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
 
         // Content-Length
-        res += "Content-Length: " + (responseBody.length) + CRLF + CRLF;
+        res += "Content-Length: " + (responseBody.length + 4) + CRLF + CRLF;
 
         byte[] responseHeader = res.getBytes();
 
