@@ -120,10 +120,10 @@ public class HTTPServerWorkerThread implements Runnable {
             Set<SelectionKey> readyKeys = selector.selectedKeys();
             Iterator<SelectionKey> iterator = readyKeys.iterator();
             while (iterator.hasNext()) {
+                // System.out.print("x");
                 SelectionKey key = iterator.next();
                 iterator.remove();
                 try {
-
                     // ==================== Accept =================
                     if (key.isAcceptable()) {
                         // Basic load balancing: if current worker has too many connections, defer to the next worker
@@ -182,11 +182,19 @@ public class HTTPServerWorkerThread implements Runnable {
                     if (key.isValid() && key.isWritable()) {
 
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
-                        if (ccb.getConnectionState() != ConnectionState.WRITE && ccb.getConnectionState() != ConnectionState.WRITTEN) {
+                        
+
+                        if (ccb.getConnectionState() != ConnectionState.WRITE && ccb.getConnectionState() != ConnectionState.WRITTEN && ccb.getConnectionState() != ConnectionState.TRANSMITTED) {
                             continue;
                         }
 
                         SocketChannel client = (SocketChannel) key.channel();
+                        if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
+                                ccb.resetState();
+                                closeSocket(client);
+                                continue;
+                        }
+
                         int writeBytes = client.write(ccb.getWriteBuffer());
                         updateCCBOnWrite(writeBytes, ccb);
 
@@ -194,6 +202,7 @@ public class HTTPServerWorkerThread implements Runnable {
                         if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
+                                // System.out.println("Keep alive");
                                 client.socket().setKeepAlive(true);
 
                                 ccb.resetState();
@@ -206,6 +215,8 @@ public class HTTPServerWorkerThread implements Runnable {
                                 key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
                             } else {
+                                // System.out.println("Close socket");
+                                ccb.resetState();
                                 closeSocket(client);
                             }
 
