@@ -51,7 +51,7 @@ public class HTTPServerWorkerThread implements Runnable {
                 ccb.setConnectionState(ConnectionState.WRITTEN);
             } else {
                 // Otherwise, write byte buffer
-                // System.out.println("Point 2 Supposed to write " + bytesRead + " bytes");
+                
                 for (int i = 0; i < bytesRead; i++) {
                     writeBuffer.put(byteBuffer[i]);
                 }

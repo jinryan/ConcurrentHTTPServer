@@ -104,7 +104,6 @@ public class HTTPRequestHandler implements RequestHandler {
                 processChunkedRequest(responseHandler);
             } else {
                 // Non-chunk encoding
-                // System.out.println("c");
                 byte[] httpResponse = processRequest();
                 assert httpResponse != null;
 
@@ -182,21 +181,15 @@ public class HTTPRequestHandler implements RequestHandler {
 
         // Write header
         responseHandler.apply(chunkedHeader, chunkedHeader.length, false);
-        // responseHandler.apply(CRLFBytes(), 2, false);
-
-        String zero = "0";
-        byte[] zeroB = zero.getBytes();
         
-
         // Write body
         while ((bytesRead = inputStream.read(buffer)) != -1) {
-
-
-
             // System.out.println("CGI Generating Chunk ===\n" + returnInfo + "\n=== of length " + returnInfo.length());
 
             // Num bytes to follow
-            byte[] chunkComponentHeader = String.valueOf(bytesRead).getBytes();
+            String chunkSize = Integer.toHexString(bytesRead);
+
+            byte[] chunkComponentHeader = chunkSize.getBytes();
             responseHandler.apply(chunkComponentHeader, chunkComponentHeader.length, false);
             responseHandler.apply(CRLFBytes(), 2, false);
 
@@ -204,6 +197,11 @@ public class HTTPRequestHandler implements RequestHandler {
             responseHandler.apply(CRLFBytes(), 2, false);
 
         }
+
+        // End body
+
+        String zero = "0";
+        byte[] zeroB = zero.getBytes();
         responseHandler.apply(zeroB, zeroB.length, false);
         // Write finish
         responseHandler.apply(null, 0, true);
