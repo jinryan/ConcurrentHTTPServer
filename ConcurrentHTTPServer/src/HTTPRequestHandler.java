@@ -91,9 +91,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
 
     public void handleRequest(HTTPResponseHandler responseHandler, WorkersSyncData syncData) {
-        // System.out.println("(103) ====== Request BEGINS ======");
-        // System.out.println(request);
-        // System.out.println("(105) ====== ENDS BEGINS ======");
         try {
             validateRequest();
             checkIfLoad(requestMap.get("Path"), syncData);
@@ -184,9 +181,6 @@ public class HTTPRequestHandler implements RequestHandler {
         
         // Write body
         while ((bytesRead = inputStream.read(buffer)) != -1) {
-            // System.out.println("CGI Generating Chunk ===\n" + returnInfo + "\n=== of length " + returnInfo.length());
-
-            // Num bytes to follow
             String chunkSize = Integer.toHexString(bytesRead);
 
             byte[] chunkComponentHeader = chunkSize.getBytes();
@@ -224,6 +218,11 @@ public class HTTPRequestHandler implements RequestHandler {
         // Last-Modified
         res += "Last-Modified: " + lastModifiedDate + CRLF;
 
+        // Connection
+        if (requestMap.containsKey("Connection") && requestMap.get("Connection").equals("keep-alive")) {
+            res += "Connection: keep-alive" + CRLF;
+        }
+
         // Content-Type
         res += "Content-Type: " + (fileType == null ? "text/plain" : fileType) + CRLF;
 
@@ -255,7 +254,6 @@ public class HTTPRequestHandler implements RequestHandler {
             parseRequest();
             if (requestMap.containsKey("Content-Length")) {
                 expectedContentFromBody = Integer.parseInt(requestMap.get("Content-Length"));
-                // System.out.println("Expecting " + expectedContentFromBody + " of content");
                 readingBody = true;
             } else if (requestMap.containsKey("Transfer-Encoding") && requestMap.get("Transfer-Encoding").equals("chunked")) {
                 chunkEncodedBody = true;
@@ -439,7 +437,6 @@ public class HTTPRequestHandler implements RequestHandler {
             if (requestMap.get("Method").equals("GET")) {
                 responseBody = processGET();
             } else if (requestMap.get("Method").equals("POST")) {
-                // System.out.println("POST");
                 responseBody = processPOST();
 
             } else {
@@ -456,8 +453,6 @@ public class HTTPRequestHandler implements RequestHandler {
     private byte[] processGET() throws ResponseException, IOException {
         byte[] response;
         File responseFile = getPath(requestMap.get("Path"));
-        // System.out.println("File path: ");
-        // System.out.println(responseFile.getAbsolutePath());
         checkType(filePath);
 
         lastModifiedDate = getLastModifiedDate(responseFile);
@@ -466,11 +461,8 @@ public class HTTPRequestHandler implements RequestHandler {
                 throw new ResponseException("File is cached", 304);
             }
         }
-
-
         
         response = getFileOutput(responseFile);
-        // System.out.println("File output length is " + response.length);
         return response;
     }
 
@@ -551,7 +543,6 @@ public class HTTPRequestHandler implements RequestHandler {
 
         String queryString = requestMap.get("Body");
         String returnContent = runCGIProgram(uri, queryString, socketChannel.getRemoteAddress().toString(), socketChannel.getLocalAddress().toString(), "POST");
-        // System.out.println("Point 1 has " + returnContent.length() + " bytes ");
         return returnContent.getBytes();
     }
 
@@ -580,7 +571,6 @@ public class HTTPRequestHandler implements RequestHandler {
         while ((bytesRead = inputStream.read(buffer)) != -1) {
             output.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
         }
-        // System.out.println("Point 1 has " + output.length() + " bytes ");
         return output.toString();
     }
 
@@ -606,6 +596,7 @@ public class HTTPRequestHandler implements RequestHandler {
             res += "WWW-Authenticate: Basic Realm=" + responseBodyStr.substring(1) + CRLF;
         }
 
+        // Connection
         if (requestMap.containsKey("Connection") && requestMap.get("Connection").equals("keep-alive")) {
             res += "Connection: keep-alive" + CRLF;
         }
