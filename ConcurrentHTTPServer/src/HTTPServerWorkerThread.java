@@ -227,7 +227,7 @@ public class HTTPServerWorkerThread implements Runnable {
                                 HTTPRequestHandler newHttpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
                                 ccb.setRequestHandler(newHttpRequestHandler);
 
-                                key.interestOps(SelectionKey.OP_READ);
+                                key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
                                 // key.cancel();
                                 // readyKeys.remove(key);
