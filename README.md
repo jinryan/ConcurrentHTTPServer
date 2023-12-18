@@ -107,7 +107,7 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 - `Accept`: allowed MIME types to be returned
 - `User-Agent`: the type of client device. The server may return mobile-optimized html files when the user agent is a mobile device
 - `If-Modified-Since`: conditional transfer: a date in which only if the server has modified the resource since, will it return it
-- `Connection`: methods for maintaining a connection between client and server. Accepts **close**, **keep-alive**
+- `Connection`: methods for maintaining a connection between client and server. Accepts **close** and **keep-alive**
 - `Authorization`: if the requested resource's directory contains a `.htaccess` file, the server requires basic authorization in the format `Basic {base64-encoded string of username:password}`
 - `Content-Type`: in the case of a POST request, Content-Type is mandatory so the server knows how to parse the request body. Content-Type can only be application/x-www-form-urlencoded
 - `Content-Length`: in the case of a POST request, Content-Length is mandatory to tell the server the length of the request body
@@ -120,7 +120,7 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 - `Server`: Addison-Ryan Server Java/1.21 (the name of this server)
 - `Last-Modified`: the date the requested resource was last modified, for use with caching using the request header `If-Modified-Since`
 - `WWW-Authenticate`: a conditional header that appears if the requested resource required authorization and no authorization header was inputted
-- `Connection`: a conditional header that appears with the value "keep-alive" if the connection was kept alive
+- `Connection`: a conditional header that appears with the value **keep-alive** if the connection was kept alive
 - `Transfer-Encoding`: a conditional header which appears in the case of a POST request. The server uses CGI and the response is in a chunked transfer encoded format
 - `Content-Type`: the MIME type of content returned
 - `Content-Length`: the length in bytes of the response body (excluding headers)
