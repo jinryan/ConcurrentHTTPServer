@@ -12,10 +12,6 @@
   GET /index.html HTTP/1.1
   GET /index.txt HTTP/1.1
 
-GET /index.html HTTP/1.1
-Connection: keep-alive
-
-  
   Response should include Date header, Server header, Content-Type header
     Content-Length matches file size
     Last-Modified matches file modification time ()
