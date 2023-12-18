@@ -37,7 +37,6 @@ public class ServerConfigObject {
         }
 
         (this.mapping.get(port)).put(serverName, docRoot);
-    //    System.out.println(serverName + ":" + port + " = " + docRoot);
     }
 
     public String getRootFrom(String serverName, int port) {

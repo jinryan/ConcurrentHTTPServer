@@ -9,7 +9,7 @@ A robust HTTP 1.x server written in Java that allows for efficient handling of t
 - Run the program using the `run` script while within the ConcurrentHTTPServer/ConcurrentHTTPServer directory:
   - To run the default configuration file, use `./run`
   - To specify a custom configuration file, add the file path as an argument: `./run -config {config_file_path}`
-- Test the server with something like `curl -i localhost:8080`
+- Test the server with something like `curl -v localhost:8080`
 
 ### Configuration File
 
@@ -36,25 +36,27 @@ The basic structure of a virtual host is as follows:
 These will work if you use the default configuration file, used automatically if no configuration file is specified
 
 ```bash
-curl -i localhost:8080
-curl -i localhost:8080/small.txt
-curl -i localhost:8080/apsodfunasdf
-curl -i localhost:8080/folder
-curl -i localhost:8080/folder/a.txt
-curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder/a.txt
-curl -i -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2t" localhost:8080/folder/a.txt
-curl -i addison:ryan_sucks@localhost:8080/folder/a.txt
-curl -i -H "User-Agent: iPhone" localhost:8080
-curl -i -H "Host: server1.com" localhost:8080
-curl -i -H "Host: server2.com" localhost:8080
-curl -i -H "Host: server3.com" localhost:8080
-curl -i -H "Accept: image/png, image/jpeg" localhost:8080/folder/test.txt
-curl -i -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/test.txt
-curl -i -H "Accept: text/*" localhost:8080/test.txt
-curl -i -H "Accept: text/html" localhost:8080/test.txt
-curl -i -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080
-curl -i -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080
-curl -i localhost:8080/load
+curl -v localhost:8080
+curl -v localhost:8080/small.txt
+curl -v localhost:8080/apsodfunasdf
+curl -v localhost:8080/folder
+curl -v localhost:8080/folder/a.txt
+curl -v -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2tz" localhost:8080/folder/a.txt
+curl -v -H "Authorization: Basic YWRkaXNvbjpyeWFuX3N1Y2t" localhost:8080/folder/a.txt
+curl -v addison:ryan_sucks@localhost:8080/folder/a.txt
+curl -v -H "User-Agent: iPhone" localhost:8080
+curl -v -H "Host: server1.com" localhost:8080
+curl -v -H "Host: server2.com" localhost:8080
+curl -v -H "Host: server3.com" localhost:8080
+curl -v -H "Accept: image/png, image/jpeg" localhost:8080/folder/test.txt
+curl -v -H "Accept: image/png, image/jpeg, */*" localhost:8080/folder/test.txt
+curl -v -H "Accept: text/*" localhost:8080/test.txt
+curl -v -H "Accept: text/html" localhost:8080/test.txt
+curl -v -H "If-Modified-Since: Sat, 20 Dec 2023 19:43:31 GMT" localhost:8080
+curl -v -H "If-Modified-Since: Sat, 20 Dec 2022 19:43:31 GMT" localhost:8080
+curl -v localhost:8080/load
+curl -v -H "Connection: keep-alive" localhost:8080/ localhost:8080/small.txt
+curl -v -H "Connection: close" localhost:8080/ localhost:8080/small.txt
 
 Post Request:
 "POST /script.cgi HTTP/1.0" + CRLF
@@ -67,17 +69,6 @@ Post Request:
   + "Transfer-Encoding: chunked" + CRLF
   + "Content-length: 30" + CRLF + CRLF
   + "q=Larry Bird&l=35&pass=testing";
-
-Keep Connection Alive Request:
-
-sentence = "GET / HTTP/1.1" + CRLF
-  + "Host: server1.com" + CRLF
-  + "Accept: text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8" + CRLF
-  + "Accept-Language: en-US,en;q=0.5" + CRLF
-  + "Cache-Control: no-cache" + CRLF
-  + "Connection: keep-alive" + CRLF
-  + "Authorization: Bearer myAccessToken123" + CRLF + CRLF;
-
 ```
 
 ## File Structure
@@ -116,7 +107,7 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 - `Accept`: allowed MIME types to be returned
 - `User-Agent`: the type of client device. The server may return mobile-optimized html files when the user agent is a mobile device
 - `If-Modified-Since`: conditional transfer: a date in which only if the server has modified the resource since, will it return it
-- `Connection`: methods for maintaining a connection between client and server. Accepts **close**, **keep-alive**
+- `Connection`: methods for maintaining a connection between client and server. Accepts **close** and **keep-alive**
 - `Authorization`: if the requested resource's directory contains a `.htaccess` file, the server requires basic authorization in the format `Basic {base64-encoded string of username:password}`
 - `Content-Type`: in the case of a POST request, Content-Type is mandatory so the server knows how to parse the request body. Content-Type can only be application/x-www-form-urlencoded
 - `Content-Length`: in the case of a POST request, Content-Length is mandatory to tell the server the length of the request body
@@ -129,9 +120,10 @@ The `HTTPRequestHandler` can handle a diverse range of headers, and works with b
 - `Server`: Addison-Ryan Server Java/1.21 (the name of this server)
 - `Last-Modified`: the date the requested resource was last modified, for use with caching using the request header `If-Modified-Since`
 - `WWW-Authenticate`: a conditional header that appears if the requested resource required authorization and no authorization header was inputted
+- `Connection`: a conditional header that appears with the value **keep-alive** if the connection was kept alive
+- `Transfer-Encoding`: a conditional header which appears in the case of a POST request. The server uses CGI and the response is in a chunked transfer encoded format
 - `Content-Type`: the MIME type of content returned
 - `Content-Length`: the length in bytes of the response body (excluding headers)
-- `Transfer-Encoding`: a conditional header which appears in the case of a POST request. The server uses CGI and the response is in a chunked transfer encoded format
 - **Response Body**: the response body begins with a double carriage line return feed, and contains the requested resource, as specified in `Content-Type` and `Content-Length`
 
 ### Simple Benchmarking

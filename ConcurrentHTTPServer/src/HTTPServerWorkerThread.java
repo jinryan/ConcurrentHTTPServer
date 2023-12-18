@@ -3,7 +3,6 @@ import ConfigParser.ServerConfigObject;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -14,9 +13,6 @@ public class HTTPServerWorkerThread implements Runnable {
     private int numActiveConnections = 0;
     ServerConfigObject serverConfig;
     private int workerID;
-
-
-
 
     public HTTPServerWorkerThread(WorkersSyncData syncData, int workerID, ServerConfigObject serverConfig) {
         this.serverConfig = serverConfig;
@@ -51,15 +47,10 @@ public class HTTPServerWorkerThread implements Runnable {
                 ccb.setConnectionState(ConnectionState.WRITTEN);
             } else {
                 // Otherwise, write byte buffer
-                
                 for (int i = 0; i < bytesRead; i++) {
                     writeBuffer.put(byteBuffer[i]);
                 }
                 ccb.setConnectionState(ConnectionState.WRITE);
-                String responseContent = new String(byteBuffer, StandardCharsets.UTF_8);
-                // System.out.println("====== RESPONSE BEGINS ========");
-                // System.out.println(responseContent);
-                // System.out.println("====== RESPONSE ENDS ========");
             }
         };
 
@@ -101,7 +92,6 @@ public class HTTPServerWorkerThread implements Runnable {
 
     private void updateCCBOnWrite(int writeBytes, ConnectionControlBlock ccb) {
         ByteBuffer writeBuffer = ccb.getWriteBuffer();
-//        System.out.println("Still need to write " + writeBuffer.array());
         if ((writeBytes == -1 || writeBuffer.remaining() == 0) && ccb.getConnectionState() == ConnectionState.WRITTEN) {
             ccb.setConnectionState(ConnectionState.TRANSMITTED);
         }
@@ -121,8 +111,6 @@ public class HTTPServerWorkerThread implements Runnable {
         }
     }
     public void run() {
-//        System.out.println("Worker #" + workerID + " listening");
-        boolean processing = false;
         while (serverIsRunning()) {
             try {
                 selector.select(); // Blocking operation, returns only after a channel is selected
@@ -138,11 +126,11 @@ public class HTTPServerWorkerThread implements Runnable {
                 try {
                     // ==================== Accept =================
                     if (key.isAcceptable()) {
-                        // Basic load balancing
+                        // Basic load balancing: if current worker has too many connections, defer to the next worker
                         if (overloaded()) {
                             continue;
                         }
-                        // Get channel
+
                         ServerSocketChannel server = (ServerSocketChannel) key.channel();
                         SocketChannel client = server.accept();
                         
@@ -155,22 +143,16 @@ public class HTTPServerWorkerThread implements Runnable {
                         System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 
-                        // Register selector
                         SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
-                        // Create CCB
                         ConnectionControlBlock ccb = new ConnectionControlBlock();
                         ccb.setConnectionState(ConnectionState.READING);
                         ccb.setLastReadTime(System.currentTimeMillis());
 
-                        // Set HTTP Request Handler
                         HTTPRequestHandler httpRequestHandler = new HTTPRequestHandler(this.serverConfig, client);
                         ccb.setRequestHandler(httpRequestHandler);
 
-
-                        // Attach to key
                         clientKey.attach(ccb);
-                        processing = true;
                     }
 
                     // ==================== Read =================
@@ -181,7 +163,6 @@ public class HTTPServerWorkerThread implements Runnable {
                             continue;
                         }
 
-                        // Get channel
                         SocketChannel client = (SocketChannel) key.channel();
 
                         int readBytes = client.read(ccb.getReadBuffer());
@@ -193,15 +174,12 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         // If done reading, generate response
                         if (ccb.getConnectionState() == ConnectionState.READ) {
-                            // Generate Response
-                            // System.out.println("done reading :))");
                             generateResponse(ccb);
                         }
                     }
 
                     // ==================== Write =================
                     if (key.isValid() && key.isWritable()) {
-                        // Should be in write state
 
                         ConnectionControlBlock ccb = (ConnectionControlBlock) key.attachment();
                         
@@ -218,12 +196,10 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
 
                         int writeBytes = client.write(ccb.getWriteBuffer());
-                        System.out.println("Wrote " + writeBytes + " bytes");
                         updateCCBOnWrite(writeBytes, ccb);
 
                         // When finish writing, close socket
                         if (ccb.getConnectionState() == ConnectionState.TRANSMITTED) {
-                            processing = false;
                             // Unless keep connection alive
                             if (ccb.isKeepConnectionAlive()) {
                                 // System.out.println("Keep alive");
@@ -247,13 +223,9 @@ public class HTTPServerWorkerThread implements Runnable {
                         }
                     }
                 } catch (IOException e) {
-                    // System.out.println("Server already shut down");
-                    
                    e.printStackTrace();
                    break;
                 } catch (CancelledKeyException e) {
-                    // System.out.println("Server already shut down");
-                    // break;
                     e.printStackTrace();
                     break;
                 }
