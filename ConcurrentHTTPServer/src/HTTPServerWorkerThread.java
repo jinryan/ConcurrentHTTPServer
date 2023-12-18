@@ -140,7 +140,6 @@ public class HTTPServerWorkerThread implements Runnable {
 
                         numActiveConnections++;
                         syncData.addConnection();
-                        System.out.println("Worker " + workerID + " accepted connection from " + client.getRemoteAddress());
                         client.configureBlocking(false);
 
                         SelectionKey clientKey = client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
