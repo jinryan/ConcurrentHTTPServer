@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class CGIProcessBuilder {
@@ -12,13 +11,7 @@ public class CGIProcessBuilder {
         processBuilder.environment().put("SERVER_*", String.valueOf(serverPort));
         processBuilder.environment().put("REQUEST_METHOD", method);
 
-
         Process process = processBuilder.start();
-//        OutputStream outputStream = process.getOutputStream();
-//
-//        byte[] queryBytes = queryString.getBytes(StandardCharsets.UTF_8);
-//
-//        outputStream.write(queryBytes);
 
         InputStream inputStream = process.getInputStream();
 
