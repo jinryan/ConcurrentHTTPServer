@@ -121,7 +121,6 @@ public class HTTPServerWorkerThread implements Runnable {
             Set<SelectionKey> readyKeys = selector.selectedKeys();
             Iterator<SelectionKey> iterator = readyKeys.iterator();
             while (iterator.hasNext()) {
-                // System.out.print("x");
                 SelectionKey key = iterator.next();
                 iterator.remove();
                 try {
