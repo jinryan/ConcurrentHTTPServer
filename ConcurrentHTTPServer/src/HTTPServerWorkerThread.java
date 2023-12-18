@@ -111,7 +111,8 @@ public class HTTPServerWorkerThread implements Runnable {
         }
     }
     public void run() {
-        while (serverIsRunning()) {
+        
+        while (serverIsRunning() || syncData.getNumConnections() > 0) {
             try {
                 selector.select(); // Blocking operation, returns only after a channel is selected
             } catch (IOException e) {
