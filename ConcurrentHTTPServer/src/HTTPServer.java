@@ -77,6 +77,9 @@ public class HTTPServer {
 
     private void quitServer() {
         syncData.setServerRun(false);
+        for (Selector selector : this.selectors) {
+            selector.wakeup();
+        }
         for (int i = 0; i < numWorkers; i++) {
             try {
                 workers[i].join();
